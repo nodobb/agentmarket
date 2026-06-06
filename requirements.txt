@@ -1,0 +1,36 @@
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.17
+
+# Database & ORM
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.17
+
+# Payment Processing
+stripe==11.2.0
+
+# Environment & Config
+python-dotenv==1.0.1
+pydantic-settings==2.6.1
+
+# Monitoring & Logging
+loguru==0.7.3
+
+# HTTP Client
+httpx==0.28.1
+
+# Development & Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+black==24.10.0
+isort==5.13.2
+
+# Production
+gunicorn==23.0.0
