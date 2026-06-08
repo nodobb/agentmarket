@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentMarket Live Demo</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white">
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <a href="/" class="text-blue-300 hover:underline">← Back to AgentMarket</a>
+    <h1 class="text-4xl font-bold mt-6 mb-4">Agent Transaction Demo</h1>
+    <p class="text-lg text-gray-300 mb-8">
+      A simple walkthrough of how an autonomous AI agent safely buys from AgentMarket.
+    </p>
+
+    <div class="space-y-6">
+      <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-2">1. Discovery</h2>
+        <p class="text-gray-300 mb-4">Agent reads the public manifest.</p>
+        <pre class="bg-black rounded p-4 overflow-x-auto text-green-300"><code>GET /.well-known/agent-manifest.json</code></pre>
+      </section>
+
+      <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-2">2. Product Search</h2>
+        <p class="text-gray-300 mb-4">Agent searches with natural language and an API key.</p>
+        <pre class="bg-black rounded p-4 overflow-x-auto text-green-300"><code>GET /api/agents/products?query=cheap+API+tokens
+X-Agent-API-Key: agent_key_here</code></pre>
+      </section>
+
+      <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-2">3. Dry-run Safety Check</h2>
+        <p class="text-gray-300 mb-4">Agent validates cost, inventory, and budget before spending.</p>
+        <pre class="bg-black rounded p-4 overflow-x-auto text-green-300"><code>POST /api/agents/dry-run
+{
+  "product_id": "api-tokens-deepseek",
+  "quantity": 1,
+  "agent_budget_limit": 10.00
+}</code></pre>
+      </section>
+
+      <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-2">4. Commit</h2>
+        <p class="text-gray-300 mb-4">Agent commits only after receiving a valid handshake token.</p>
+        <pre class="bg-black rounded p-4 overflow-x-auto text-green-300"><code>POST /api/agents/commit
+{
+  "handshake_token": "hs_validated_token"
+}</code></pre>
+      </section>
+    </div>
+
+    <a href="/docs" class="inline-block mt-8 bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-700">Try the API Docs</a>
+  </main>
+</body>
+</html>

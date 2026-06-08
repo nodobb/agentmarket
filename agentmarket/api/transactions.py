@@ -49,7 +49,12 @@ async def list_transactions(
 ):
     """List transactions (admin sees all, vendors see their own)"""
     
-    query = db.query(Transaction).join(Agent).join(Product).join(Vendor)
+    query = (
+        db.query(Transaction)
+        .join(Agent, Transaction.agent_id == Agent.id)
+        .join(Product, Transaction.product_id == Product.id)
+        .join(Vendor, Transaction.vendor_id == Vendor.id)
+    )
     
     # Filter based on user role
     if current_user.role == "vendor":

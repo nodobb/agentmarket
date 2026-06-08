@@ -121,7 +121,7 @@ async def agent_manifest():
         "version": "2.0.0",
         "agent_capabilities": {
             "discovery": "GET /api/agents/products for semantic product search",
-            "transactions": "Two-phase commit protocol via /api/transactions/dry-run and /api/transactions/commit",
+            "transactions": "Two-phase commit protocol via /api/agents/dry-run and /api/agents/commit",
             "authentication": "API key authentication via X-Agent-API-Key header",
             "budget_controls": "Built-in budget validation and human escalation triggers"
         },
@@ -135,8 +135,8 @@ async def agent_manifest():
         },
         "endpoints": {
             "product_search": "/api/agents/products",
-            "dry_run": "/api/transactions/dry-run",
-            "commit": "/api/transactions/commit",
+            "dry_run": "/api/agents/dry-run",
+            "commit": "/api/agents/commit",
             "status": "/api/agents/status",
             "documentation": "/docs"
         },

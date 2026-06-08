@@ -1,53 +1,41 @@
 """
-Database connection and initialization
+Database connection and initialization.
+
+The API code uses synchronous SQLAlchemy sessions (`db.query(...)`) throughout,
+so the database layer must provide a synchronous Session for both SQLite and
+PostgreSQL. Keeping this sync avoids FastAPI injecting an async session into sync
+query code, and avoids accidentally returning a generator object instead of a
+session.
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from agentmarket.utils.config import settings
+
 from agentmarket.models.database import Base
-import asyncio
+from agentmarket.utils.config import settings
 
 
-# Determine if we're using async or sync database
-if settings.DATABASE_URL.startswith("postgresql"):
-    # Use async PostgreSQL
-    async_engine = create_async_engine(
-        settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
-        echo=settings.DEBUG
-    )
-    AsyncSessionLocal = sessionmaker(async_engine, class_=AsyncSession)
-    
-    async def get_async_db():
-        async with AsyncSessionLocal() as session:
-            yield session
-            
-    async def init_db():
-        """Initialize database tables"""
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
 
-else:
-    # Use sync SQLite for development
-    engine = create_engine(settings.DATABASE_URL, echo=settings.DEBUG)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
-    def get_db():
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-            
-    async def init_db():
-        """Initialize database tables"""
-        Base.metadata.create_all(bind=engine)
+engine = create_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+    connect_args=connect_args,
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-# Database dependency
-if settings.DATABASE_URL.startswith("postgresql"):
-    get_db_dependency = get_async_db
-else:
-    def get_db_dependency():
-        return get_db()
+def get_db_dependency():
+    """FastAPI dependency that yields a real SQLAlchemy Session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+async def init_db():
+    """Initialize database tables."""
+    Base.metadata.create_all(bind=engine)
