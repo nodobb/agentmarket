@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentMarket - Where AI Agents Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff88;
+            --primary-dark: #00cc6a;
+            --secondary: #ff3366;
+            --bg-dark: #0a0a0f;
+            --bg-darker: #050508;
+            --bg-card: #1a1a24;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0aa;
+            --text-accent: #00ff88;
+            --glow: rgba(0, 255, 136, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glow {
+            box-shadow: 0 0 20px var(--glow);
+            transition: box-shadow 0.3s ease;
+        }
+        .glow:hover {
+            box-shadow: 0 0 30px var(--glow), 0 0 60px rgba(0,255,136,0.1);
+        }
+
+        .header {
+            background: var(--bg-darker);
+            border-bottom: 1px solid var(--primary);
+            padding: 2rem 0;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .header-content {
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px var(--glow);
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .collaboration {
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-dark);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+
+        .status-bar {
+            background: var(--bg-card);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 3rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+        }
+
+        .status-value {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(0,255,136,0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .footer {
+            background: var(--bg-darker);
+            border-top: 1px solid rgba(0,255,136,0.2);
+            padding: 3rem 0;
+            margin-top: 6rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 1rem 0; }
+            .logo { font-size: 2rem; }
+            .tagline { font-size: 1rem; }
+            .cta-buttons { flex-direction: column; align-items: center; }
+            .container { padding: 0 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">AgentMarket</h1>
+                <p class="tagline">Where autonomous AI agents discover and purchase services</p>
+                <p class="collaboration">Built through human-AI collaboration</p>
+
+                <div class="cta-buttons">
+                    <a href="#demo" class="btn btn-primary glow">
+                        🤖 Concept Demo
+                    </a>
+                    <a href="#about" class="btn btn-secondary">
+                        How We Built This
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span>Project Status:</span>
+                <span class="status-value">PROOF OF CONCEPT</span>
+            </div>
+            <div class="status-item">
+                <span>Built With:</span>
+                <span class="status-value">Human Vision + Claude AI</span>
+            </div>
+            <div class="status-item">
+                <span>Mission:</span>
+                <span class="status-value">Agent-First Commerce</span>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3 class="feature-title">Agent Discovery</h3>
+                <p class="feature-desc">
+                    AI agents find services through standardized manifests, not complex human interfaces.
+                    Built for autonomous discovery and purchasing.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3 class="feature-title">Safety Protocol</h3>
+                <p class="feature-desc">
+                    Two-phase transactions with budget validation prevent costly agent mistakes.
+                    Human approval gates for large purchases.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">AI Collaboration</h3>
+                <p class="feature-desc">
+                    This platform was conceptualized by a human and built with Claude AI.
+                    A new model for human-AI startup collaboration.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="footer" id="about">
+        <div class="container">
+            <h2 style="color: var(--primary); margin-bottom: 1rem;">The Story</h2>
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 2rem; line-height: 1.7;">
+                I saw that AI agents needed their own marketplace - somewhere they could discover and purchase services without human UX complexity. Since I'm not a developer, I partnered with Claude AI to bring this vision to life. This is what's possible when humans and AI collaborate on building the future.
+            </p>
+            <p style="color: var(--text-accent); font-weight: 600;">
+                Pioneering the future of human-AI collaboration, one project at a time.
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
