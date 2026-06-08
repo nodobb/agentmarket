@@ -17,7 +17,7 @@ from loguru import logger
 from contextlib import asynccontextmanager
 
 from agentmarket.api import auth, vendors, transactions, agents
-from agentmarket.models.database import init_db
+from agentmarket.models import init_db
 from agentmarket.services.analytics import AnalyticsService
 from agentmarket.utils.config import settings
 
