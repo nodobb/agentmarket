@@ -45,8 +45,8 @@ app = FastAPI(
     title="AgentMarket",
     description="The world's first B2A (Business-to-Agent) marketplace built from the ground up for autonomous AI agents.",
     version="2.0.0",
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
 )
 

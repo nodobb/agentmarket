@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from agentmarket.models import get_db_dependency
-from agentmarket.models.database import Transaction, TransactionStatus, User, Agent, Vendor
+from agentmarket.models.database import Transaction, TransactionStatus, User, Agent, Vendor, Product
 from agentmarket.services.auth import get_current_user, get_admin_user
 
 
@@ -49,7 +49,7 @@ async def list_transactions(
 ):
     """List transactions (admin sees all, vendors see their own)"""
     
-    query = db.query(Transaction).join(Agent).join(Transaction.product).join(Transaction.vendor)
+    query = db.query(Transaction).join(Agent).join(Product).join(Vendor)
     
     # Filter based on user role
     if current_user.role == "vendor":

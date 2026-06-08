@@ -34,7 +34,10 @@ class AnalyticsService:
         
         # Get database session (simplified - in production use dependency injection)
         try:
-            from agentmarket.models import SessionLocal
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            engine = create_engine(settings.DATABASE_URL)
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
             db = SessionLocal()
             
             analytics_entry = Analytics(
