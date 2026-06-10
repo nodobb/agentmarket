@@ -61,8 +61,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Local SQLite database
-agentmarket.db
+# Local SQLite database (including -journal/-wal/-shm sidecar files)
+agentmarket.db*
 
 # Flask stuff:
 instance/
