@@ -192,5 +192,51 @@ async def approve_transaction(
         message = "Transaction denied"
     
     db.commit()
-    
+
     return {"message": message, "status": transaction.status.value}
+
+
+@router.post("/{transaction_id}/refund")
+async def refund_transaction(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """Refund a committed transaction in full (agent owner or admin only)"""
+
+    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    if current_user.role != UserRole.ADMIN:
+        agent_ids = [agent.id for agent in current_user.agents]
+        if transaction.agent_id not in agent_ids:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    if transaction.status not in (TransactionStatus.COMMITTED, TransactionStatus.COMPLETED):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only completed transactions can be refunded (status is '{transaction.status.value}')"
+        )
+
+    try:
+        refund = payments.refund_transaction(transaction)
+    except payments.PaymentError as e:
+        raise HTTPException(status_code=402, detail=str(e))
+
+    transaction.status = TransactionStatus.REFUNDED
+    transaction.approval_reason = f"Refunded by {current_user.full_name}"
+
+    # Return the items to inventory
+    if not transaction.product.is_unlimited_stock:
+        transaction.product.stock_count += transaction.quantity
+
+    db.commit()
+
+    return {
+        "message": "Transaction refunded",
+        "status": transaction.status.value,
+        "payment_mode": refund["payment_mode"],
+        "refund_id": refund["refund_id"],
+    }
