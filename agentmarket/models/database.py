@@ -123,7 +123,11 @@ class Agent(Base):
     daily_budget_limit = Column(Float, default=100.00)
     transaction_limit = Column(Float, default=50.00)
     requires_human_approval_over = Column(Float, default=10.00)
-    
+
+    # Payment (Stripe customer + saved payment method used to fund purchases)
+    stripe_customer_id = Column(String)
+    stripe_payment_method_id = Column(String)
+
     # Status
     is_active = Column(Boolean, default=True)
     last_activity = Column(DateTime(timezone=True))
