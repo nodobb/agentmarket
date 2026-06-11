@@ -1,2 +1,116 @@
-# agentmarket
-First B2A marketplace built through human-AI collaboration - where autonomous agents discover and purchase services
+# AgentMarket
+
+A B2A (Business-to-Agent) marketplace where autonomous AI agents discover and
+purchase services from vendors — built API-first, with safety controls
+(budgets, approval thresholds, two-phase transactions) at the core.
+
+> **Status: beta.** All marketplace flows work end-to-end, but **payments are
+> simulated** — transactions are recorded and inventory is updated, yet no
+> money moves. Every purchase response says so via `payment_mode: "simulated"`.
+
+## How it works
+
+1. **Vendors** register an account, create a vendor profile, and list products.
+2. **Agent owners** register an account and provision agents — each agent gets
+   an API key and safety limits (daily budget, per-transaction cap, and a
+   threshold above which a human must approve).
+3. **Agents** authenticate with their API key, search products, and buy using
+   a two-phase protocol:
+   - `POST /api/agents/dry-run` validates the purchase and returns full pricing
+     plus a handshake token (expires in 5 minutes)
+   - `POST /api/agents/commit` finalizes it — unless the amount crossed a
+     safety limit, in which case the owner must approve it first via
+     `POST /api/transactions/{id}/approve`
+
+## Quick start
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+Then open http://127.0.0.1:8000/docs for the interactive API docs, or
+http://127.0.0.1:8000/ for the landing page.
+
+### Try the full flow
+
+```bash
+BASE=http://127.0.0.1:8000
+
+# 1. Create an account and log in
+curl -X POST $BASE/api/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"me@example.com","password":"a-strong-password","full_name":"Me"}'
+TOKEN=$(curl -s -X POST $BASE/api/auth/login \
+  -d 'username=me@example.com&password=a-strong-password' | jq -r .access_token)
+
+# 2. Become a vendor and list a product
+curl -X POST $BASE/api/vendors/register -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"business_name":"My Shop","description":"API credits"}'
+curl -X POST $BASE/api/vendors/products -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"external_id":"credits-1k","name":"1000 API Credits","description":"Bulk credits","price":9.99,"category":"api_services","tags":["api"],"stock_count":100}'
+
+# 3. Provision an agent (the API key is shown once - save it)
+KEY=$(curl -s -X POST $BASE/api/agents/register -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"ShopBot","requires_human_approval_over":25}' | jq -r .api_key)
+
+# 4. The agent shops
+curl "$BASE/api/agents/products?query=api+credits" -H "X-Agent-API-Key: $KEY"
+HS=$(curl -s -X POST $BASE/api/agents/dry-run -H "X-Agent-API-Key: $KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"product_id":"credits-1k","quantity":1}' | jq -r .handshake_token)
+curl -X POST $BASE/api/agents/commit -H "X-Agent-API-Key: $KEY" \
+  -H 'Content-Type: application/json' -d "{\"handshake_token\":\"$HS\"}"
+```
+
+## Running the tests
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
+## Configuration
+
+Settings load from environment variables (or a `.env` file) — see
+`agentmarket/utils/config.py` for the full list. Key ones:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./agentmarket.db` | Use PostgreSQL in production |
+| `SECRET_KEY` / `JWT_SECRET_KEY` | placeholders | **Required in production** — the app refuses to start with the defaults when `DEBUG=false` |
+| `DEBUG` | `true` | Set `false` in production |
+| `COMMISSION_RATE` | `0.025` | Platform commission (2.5%) |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Per-agent rate limit on agent endpoints |
+
+## Deployment
+
+`render.yaml` deploys to [Render](https://render.com) with a managed
+PostgreSQL database and generated secrets — connect the repo in the Render
+dashboard as a Blueprint and it should work out of the box. A `Procfile`
+(Heroku-style) and `railway.json` are also included.
+
+## Project structure
+
+```
+agentmarket/
+├── api/            # Route handlers: auth, vendors, transactions, agents
+├── models/         # SQLAlchemy models and DB session setup
+├── services/       # Auth and analytics services
+└── utils/          # Settings and rate limiting
+frontend/           # Jinja2 templates and static files
+tests/              # Pytest suite covering the API flows
+main.py             # FastAPI app entry point
+```
+
+## What's not done yet
+
+- **Real payments** — Stripe fields exist on the models but no charges are
+  made; vendor payouts need Stripe Connect onboarding
+- Tax (flat 8%) and shipping (flat $5 on merch) are placeholders
+- Search is keyword matching, not semantic/vector search
+- Daily budget limits are stored per agent but not yet enforced across a day

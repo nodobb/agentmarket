@@ -4,7 +4,7 @@ The core agent interaction endpoints
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
@@ -15,6 +15,7 @@ from agentmarket.models import get_db_dependency
 from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor, User
 from agentmarket.services.auth import get_current_agent, get_current_user
 from agentmarket.utils.config import settings
+from agentmarket.utils.rate_limit import limiter, AGENT_RATE_LIMIT
 
 
 router = APIRouter()
@@ -97,10 +98,13 @@ class CommitResponse(BaseModel):
     status: str
     total_amount: float
     completion_message: str
+    payment_mode: str = Field(..., description="'simulated' until real payment processing is enabled - no money moves")
 
 
 @router.get("/products", response_model=List[ProductSearchResponse])
+@limiter.limit(AGENT_RATE_LIMIT)
 async def search_products(
+    request: Request,
     query: Optional[str] = Query(None, description="Semantic search query (e.g., 'cheap API tokens')"),
     category: Optional[str] = Query(None, description="Filter by category"),
     max_price: Optional[float] = Query(None, description="Maximum price filter"),
@@ -165,8 +169,10 @@ async def search_products(
 
 
 @router.post("/dry-run", response_model=DryRunResponse)
+@limiter.limit(AGENT_RATE_LIMIT)
 async def dry_run_transaction(
-    request: DryRunRequest,
+    request: Request,
+    dry_run_request: DryRunRequest,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):
@@ -180,7 +186,7 @@ async def dry_run_transaction(
     
     # Find product
     product = db.query(Product).filter(
-        Product.external_id == request.product_id,
+        Product.external_id == dry_run_request.product_id,
         Product.is_active == True
     ).first()
     
@@ -188,11 +194,11 @@ async def dry_run_transaction(
         raise HTTPException(status_code=404, detail="Product not found")
     
     # Check inventory
-    if not product.is_unlimited_stock and product.stock_count < request.quantity:
+    if not product.is_unlimited_stock and product.stock_count < dry_run_request.quantity:
         raise HTTPException(status_code=400, detail="Insufficient inventory")
     
     # Calculate pricing
-    subtotal = product.price * request.quantity
+    subtotal = product.price * dry_run_request.quantity
     tax = subtotal * 0.08  # 8% tax (simplified)
     shipping = 5.00 if product.category == "merch" else 0.00  # Simplified shipping
     commission = subtotal * settings.COMMISSION_RATE
@@ -202,9 +208,9 @@ async def dry_run_transaction(
     requires_approval = False
     approval_reason = None
     
-    if request.agent_budget_limit and total_cost > request.agent_budget_limit:
+    if dry_run_request.agent_budget_limit and total_cost > dry_run_request.agent_budget_limit:
         requires_approval = True
-        approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent budget limit of ${request.agent_budget_limit:.2f}"
+        approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent budget limit of ${dry_run_request.agent_budget_limit:.2f}"
     
     if total_cost > agent.requires_human_approval_over:
         requires_approval = True
@@ -224,7 +230,7 @@ async def dry_run_transaction(
         product_id=product.id,
         vendor_id=product.vendor_id,
         handshake_token=handshake_token,
-        quantity=request.quantity,
+        quantity=dry_run_request.quantity,
         price_per_unit=product.price,
         subtotal=subtotal,
         tax_amount=tax,
@@ -243,8 +249,8 @@ async def dry_run_transaction(
     
     return DryRunResponse(
         handshake_token=handshake_token,
-        product_id=request.product_id,
-        quantity=request.quantity,
+        product_id=dry_run_request.product_id,
+        quantity=dry_run_request.quantity,
         price_per_unit=product.price,
         subtotal=subtotal,
         tax=tax,
@@ -258,8 +264,10 @@ async def dry_run_transaction(
 
 
 @router.post("/commit", response_model=CommitResponse)
+@limiter.limit(AGENT_RATE_LIMIT)
 async def commit_transaction(
-    request: CommitRequest,
+    request: Request,
+    commit_request: CommitRequest,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):
@@ -273,7 +281,7 @@ async def commit_transaction(
     
     # Find the dry-run transaction
     transaction = db.query(Transaction).filter(
-        Transaction.handshake_token == request.handshake_token,
+        Transaction.handshake_token == commit_request.handshake_token,
         Transaction.agent_id == agent.id,
         Transaction.status == TransactionStatus.DRY_RUN
     ).first()
@@ -292,7 +300,9 @@ async def commit_transaction(
             detail=f"Human approval required: {transaction.approval_reason}"
         )
     
-    # Process payment (simplified - in production, integrate with Stripe)
+    # Payment processing is not implemented yet: the transaction is recorded
+    # and inventory updated, but no money moves. The response says so
+    # explicitly via payment_mode="simulated".
     receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
     
     # Update transaction
@@ -311,7 +321,8 @@ async def commit_transaction(
         receipt_id=receipt_id,
         status="completed",
         total_amount=transaction.total_amount,
-        completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}"
+        completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}",
+        payment_mode="simulated"
     )
 
 
@@ -376,7 +387,9 @@ async def list_my_agents(
 
 
 @router.get("/status")
+@limiter.limit(AGENT_RATE_LIMIT)
 async def agent_status(
+    request: Request,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):

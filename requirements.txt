@@ -22,6 +22,9 @@ stripe==11.2.0
 python-dotenv==1.0.1
 pydantic-settings==2.6.1
 
+# Rate Limiting
+slowapi==0.1.9
+
 # Monitoring & Logging
 loguru==0.7.3
 

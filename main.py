@@ -16,10 +16,14 @@ from datetime import datetime
 from loguru import logger
 from contextlib import asynccontextmanager
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from agentmarket.api import auth, vendors, transactions, agents
 from agentmarket.models import init_db
 from agentmarket.services.analytics import AnalyticsService
 from agentmarket.utils.config import settings
+from agentmarket.utils.rate_limit import limiter
 
 
 DEFAULT_SECRETS = {
@@ -65,6 +69,10 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Security Middleware
 app.add_middleware(
