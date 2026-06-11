@@ -22,11 +22,27 @@ from agentmarket.services.analytics import AnalyticsService
 from agentmarket.utils.config import settings
 
 
+DEFAULT_SECRETS = {
+    "SECRET_KEY": "your-super-secret-key-change-this-in-production",
+    "JWT_SECRET_KEY": "jwt-secret-key-change-this",
+}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle management"""
     logger.info("Starting AgentMarket application...")
-    
+
+    # Refuse to run in production with placeholder secrets
+    if not settings.DEBUG:
+        unset = [name for name, default in DEFAULT_SECRETS.items()
+                 if getattr(settings, name) == default]
+        if unset:
+            raise RuntimeError(
+                f"Refusing to start with default values for: {', '.join(unset)}. "
+                "Set them via environment variables."
+            )
+
     # Initialize database
     await init_db()
     

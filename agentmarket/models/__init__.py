@@ -15,10 +15,15 @@ from agentmarket.models.database import Base
 from agentmarket.utils.config import settings
 
 
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+# Render/Heroku provide postgres:// URLs, but SQLAlchemy 2.x only accepts postgresql://
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    database_url,
     echo=settings.DEBUG,
     pool_pre_ping=True,
     connect_args=connect_args,

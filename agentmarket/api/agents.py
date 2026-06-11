@@ -12,8 +12,8 @@ import secrets
 import uuid
 
 from agentmarket.models import get_db_dependency
-from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor
-from agentmarket.services.auth import get_current_agent
+from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor, User
+from agentmarket.services.auth import get_current_agent, get_current_user
 from agentmarket.utils.config import settings
 
 
@@ -61,6 +61,34 @@ class DryRunResponse(BaseModel):
 
 class CommitRequest(BaseModel):
     handshake_token: str = Field(..., description="Token from successful dry-run")
+
+
+class AgentCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Human-readable name for the agent")
+    user_agent_string: Optional[str] = Field(None, description="User-Agent the agent will send with requests")
+    daily_budget_limit: float = Field(100.00, gt=0, description="Maximum total spend per day")
+    transaction_limit: float = Field(50.00, gt=0, description="Maximum amount per transaction")
+    requires_human_approval_over: float = Field(10.00, ge=0, description="Transactions above this amount require owner approval")
+
+
+class AgentRegisterResponse(BaseModel):
+    id: int
+    name: str
+    api_key: str = Field(..., description="Store this securely - it is only shown once")
+    daily_budget_limit: float
+    transaction_limit: float
+    requires_human_approval_over: float
+
+
+class AgentSummary(BaseModel):
+    id: int
+    name: str
+    api_key_preview: str
+    daily_budget_limit: float
+    transaction_limit: float
+    requires_human_approval_over: float
+    is_active: bool
+    last_activity: Optional[datetime]
 
 
 class CommitResponse(BaseModel):
@@ -285,6 +313,66 @@ async def commit_transaction(
         total_amount=transaction.total_amount,
         completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}"
     )
+
+
+@router.post("/register", response_model=AgentRegisterResponse)
+async def register_agent(
+    agent_data: AgentCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """
+    Register a new agent and receive its API key.
+    The API key is only returned once - store it securely.
+    """
+
+    agent = Agent(
+        owner_id=current_user.id,
+        name=agent_data.name,
+        api_key=f"ak_{secrets.token_urlsafe(32)}",
+        user_agent_string=agent_data.user_agent_string,
+        daily_budget_limit=agent_data.daily_budget_limit,
+        transaction_limit=agent_data.transaction_limit,
+        requires_human_approval_over=agent_data.requires_human_approval_over,
+        is_active=True
+    )
+
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+
+    return AgentRegisterResponse(
+        id=agent.id,
+        name=agent.name,
+        api_key=agent.api_key,
+        daily_budget_limit=agent.daily_budget_limit,
+        transaction_limit=agent.transaction_limit,
+        requires_human_approval_over=agent.requires_human_approval_over
+    )
+
+
+@router.get("/mine", response_model=List[AgentSummary])
+async def list_my_agents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """List agents owned by the current user (API keys are masked)"""
+
+    agents = db.query(Agent).filter(Agent.owner_id == current_user.id).all()
+
+    return [
+        AgentSummary(
+            id=agent.id,
+            name=agent.name,
+            api_key_preview=f"{agent.api_key[:7]}...{agent.api_key[-4:]}",
+            daily_budget_limit=agent.daily_budget_limit,
+            transaction_limit=agent.transaction_limit,
+            requires_human_approval_over=agent.requires_human_approval_over,
+            is_active=agent.is_active,
+            last_activity=agent.last_activity
+        )
+        for agent in agents
+    ]
 
 
 @router.get("/status")

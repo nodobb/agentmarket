@@ -1,14 +1,22 @@
+databases:
+  - name: agentmarket-db
+    plan: free
+
 services:
   - type: web
     name: agentmarket
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
-    healthCheckPath: /docs
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./agentmarket.db
+        fromDatabase:
+          name: agentmarket-db
+          property: connectionString
       - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
         generateValue: true
       - key: COMMISSION_RATE
         value: "0.025"
