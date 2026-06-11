@@ -14,6 +14,7 @@ import uuid
 from agentmarket.models import get_db_dependency
 from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor, User
 from agentmarket.services.auth import get_current_agent, get_current_user
+from agentmarket.services import payments
 from agentmarket.utils.config import settings
 from agentmarket.utils.rate_limit import limiter, AGENT_RATE_LIMIT
 
@@ -98,7 +99,16 @@ class CommitResponse(BaseModel):
     status: str
     total_amount: float
     completion_message: str
-    payment_mode: str = Field(..., description="'simulated' until real payment processing is enabled - no money moves")
+    payment_mode: str = Field(..., description="'live' or 'test' when charged via Stripe; 'simulated' when Stripe is not configured (no money moves)")
+
+
+class PaymentMethodRequest(BaseModel):
+    payment_method_id: str = Field(..., description="Stripe PaymentMethod id (pm_...), e.g. from Stripe.js or a Stripe test payment method like pm_card_visa")
+
+
+class PaymentMethodResponse(BaseModel):
+    agent_id: int
+    payment_method: str = Field(..., description="Human-readable label of the saved card")
 
 
 @router.get("/products", response_model=List[ProductSearchResponse])
@@ -300,29 +310,35 @@ async def commit_transaction(
             detail=f"Human approval required: {transaction.approval_reason}"
         )
     
-    # Payment processing is not implemented yet: the transaction is recorded
-    # and inventory updated, but no money moves. The response says so
-    # explicitly via payment_mode="simulated".
+    # Charge the agent's saved payment method (or record a simulated
+    # purchase when Stripe is not configured - payment_mode says which)
+    try:
+        payment = payments.charge_transaction(agent, transaction)
+    except payments.PaymentError as e:
+        raise HTTPException(status_code=402, detail=str(e))
+
     receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
-    
+
     # Update transaction
     transaction.status = TransactionStatus.COMMITTED
     transaction.committed_at = datetime.utcnow()
     transaction.completed_at = datetime.utcnow()  # Simplified
-    
+    transaction.stripe_payment_intent_id = payment["payment_intent_id"]
+    transaction.stripe_charge_id = payment["charge_id"]
+
     # Update product inventory
     if not transaction.product.is_unlimited_stock:
         transaction.product.stock_count -= transaction.quantity
-    
+
     db.commit()
-    
+
     return CommitResponse(
         transaction_id=str(transaction.id),
         receipt_id=receipt_id,
         status="completed",
         total_amount=transaction.total_amount,
         completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}",
-        payment_mode="simulated"
+        payment_mode=payment["payment_mode"]
     )
 
 
@@ -360,6 +376,36 @@ async def register_agent(
         transaction_limit=agent.transaction_limit,
         requires_human_approval_over=agent.requires_human_approval_over
     )
+
+
+@router.post("/{agent_id}/payment-method", response_model=PaymentMethodResponse)
+async def add_payment_method(
+    agent_id: int,
+    payment_data: PaymentMethodRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """
+    Attach a payment method (card) to one of your agents.
+    Purchases by the agent are charged to this card via Stripe.
+    """
+
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    if agent.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    try:
+        card_label = payments.attach_payment_method(
+            agent, payment_data.payment_method_id, current_user.email
+        )
+    except payments.PaymentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    db.commit()
+
+    return PaymentMethodResponse(agent_id=agent.id, payment_method=card_label)
 
 
 @router.get("/mine", response_model=List[AgentSummary])

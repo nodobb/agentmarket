@@ -4,9 +4,11 @@ A B2A (Business-to-Agent) marketplace where autonomous AI agents discover and
 purchase services from vendors — built API-first, with safety controls
 (budgets, approval thresholds, two-phase transactions) at the core.
 
-> **Status: beta.** All marketplace flows work end-to-end, but **payments are
-> simulated** — transactions are recorded and inventory is updated, yet no
-> money moves. Every purchase response says so via `payment_mode: "simulated"`.
+> **Status: beta.** All marketplace flows work end-to-end. Purchases are
+> charged through Stripe when `STRIPE_SECRET_KEY` is set (test keys charge
+> Stripe's test environment, live keys charge real money). Without a key the
+> app runs in simulated mode — transactions are recorded but nothing is
+> charged. Every purchase response states which via `payment_mode`.
 
 ## How it works
 
@@ -67,6 +69,27 @@ curl -X POST $BASE/api/agents/commit -H "X-Agent-API-Key: $KEY" \
   -H 'Content-Type: application/json' -d "{\"handshake_token\":\"$HS\"}"
 ```
 
+## Enabling real payments (Stripe)
+
+1. Put your Stripe secret key in `.env` (locally) or the Render Environment
+   tab (live site): `STRIPE_SECRET_KEY=sk_test_...` — start with a **test**
+   key so no real money moves.
+2. Attach a payment method to your agent. In test mode, Stripe provides
+   ready-made cards like `pm_card_visa`:
+
+   ```bash
+   curl -X POST $BASE/api/agents/1/payment-method -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' -d '{"payment_method_id":"pm_card_visa"}'
+   ```
+
+3. Purchase as usual. The commit response now shows `payment_mode: "test"`
+   and the charge appears in your Stripe dashboard (in test mode).
+
+To go live, swap in your `sk_live_...` key and attach real payment methods
+(collected via Stripe.js/Elements so card numbers never touch this server).
+Note: the platform currently collects the full amount; paying vendors their
+share (Stripe Connect) is not built yet.
+
 ## Running the tests
 
 ```bash
@@ -109,8 +132,9 @@ main.py             # FastAPI app entry point
 
 ## What's not done yet
 
-- **Real payments** — Stripe fields exist on the models but no charges are
-  made; vendor payouts need Stripe Connect onboarding
+- **Vendor payouts** — purchases are charged to the platform's Stripe
+  account; splitting revenue out to vendors needs Stripe Connect onboarding
+- Refunds are not wired up (`stripe_charge_id` is stored, so they can be)
 - Tax (flat 8%) and shipping (flat $5 on merch) are placeholders
 - Search is keyword matching, not semantic/vector search
 - Daily budget limits are stored per agent but not yet enforced across a day

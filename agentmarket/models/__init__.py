@@ -44,3 +44,24 @@ def get_db_dependency():
 async def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns():
+    """
+    Minimal migration: create_all never alters existing tables, so columns
+    added to the models after a database was first created must be added
+    here. (A future move to Alembic would replace this.)
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name not in existing:
+                    ddl = f"ALTER TABLE {table.name} ADD COLUMN {column.name} {column.type.compile(engine.dialect)}"
+                    conn.execute(text(ddl))

@@ -18,6 +18,8 @@ services:
         generateValue: true
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: STRIPE_SECRET_KEY
+        sync: false
       - key: COMMISSION_RATE
         value: "0.025"
       - key: DEBUG

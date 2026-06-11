@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from agentmarket.models import get_db_dependency
 from agentmarket.models.database import Transaction, TransactionStatus, User, UserRole, Agent, Vendor, Product
 from agentmarket.services.auth import get_current_user, get_admin_user
+from agentmarket.services import payments
 
 
 router = APIRouter()
@@ -163,16 +164,25 @@ async def approve_transaction(
             raise HTTPException(status_code=403, detail="Access denied")
     
     if approval_request.approved:
-        # Approve and process the transaction
+        # Approval commits the transaction, so the charge happens here.
+        # If the card fails, the transaction stays pending so it can be retried.
+        try:
+            payment = payments.charge_transaction(transaction.agent, transaction)
+        except payments.PaymentError as e:
+            db.rollback()
+            raise HTTPException(status_code=402, detail=str(e))
+
         transaction.requires_human_approval = False
         transaction.approval_reason = f"Approved by {current_user.full_name}: {approval_request.reason or 'No reason provided'}"
         transaction.status = TransactionStatus.COMMITTED
         transaction.committed_at = datetime.utcnow()
-        
+        transaction.stripe_payment_intent_id = payment["payment_intent_id"]
+        transaction.stripe_charge_id = payment["charge_id"]
+
         # Update product inventory if needed
         if not transaction.product.is_unlimited_stock:
             transaction.product.stock_count -= transaction.quantity
-        
+
         message = "Transaction approved and processed"
     else:
         # Deny the transaction
