@@ -349,9 +349,10 @@ async def commit_transaction(
     transaction.stripe_payment_intent_id = payment["payment_intent_id"]
     transaction.stripe_charge_id = payment["charge_id"]
 
-    # Update product inventory
+    # Update product inventory (SQL expression so concurrent purchases
+    # decrement atomically instead of overwriting each other)
     if not transaction.product.is_unlimited_stock:
-        transaction.product.stock_count -= transaction.quantity
+        transaction.product.stock_count = Product.stock_count - transaction.quantity
 
     db.commit()
 

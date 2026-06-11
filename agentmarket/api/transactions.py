@@ -179,9 +179,10 @@ async def approve_transaction(
         transaction.stripe_payment_intent_id = payment["payment_intent_id"]
         transaction.stripe_charge_id = payment["charge_id"]
 
-        # Update product inventory if needed
+        # Update product inventory (SQL expression so concurrent updates
+        # decrement atomically instead of overwriting each other)
         if not transaction.product.is_unlimited_stock:
-            transaction.product.stock_count -= transaction.quantity
+            transaction.product.stock_count = Product.stock_count - transaction.quantity
 
         message = "Transaction approved and processed"
     else:
@@ -228,9 +229,9 @@ async def refund_transaction(
     transaction.status = TransactionStatus.REFUNDED
     transaction.approval_reason = f"Refunded by {current_user.full_name}"
 
-    # Return the items to inventory
+    # Return the items to inventory (atomic SQL expression, see above)
     if not transaction.product.is_unlimited_stock:
-        transaction.product.stock_count += transaction.quantity
+        transaction.product.stock_count = Product.stock_count + transaction.quantity
 
     db.commit()
 
