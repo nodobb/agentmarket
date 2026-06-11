@@ -5,6 +5,7 @@ The core agent interaction endpoints
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
@@ -20,6 +21,16 @@ from agentmarket.utils.rate_limit import limiter, AGENT_RATE_LIMIT
 
 
 router = APIRouter()
+
+
+def spent_today(db: Session, agent: Agent) -> float:
+    """Total committed spend for this agent since midnight UTC (refunds excluded)."""
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    return db.query(func.coalesce(func.sum(Transaction.total_amount), 0.0)).filter(
+        Transaction.agent_id == agent.id,
+        Transaction.status.in_([TransactionStatus.COMMITTED, TransactionStatus.COMPLETED]),
+        Transaction.committed_at >= today_start,
+    ).scalar()
 
 
 # Pydantic models
@@ -225,7 +236,19 @@ async def dry_run_transaction(
     if total_cost > agent.requires_human_approval_over:
         requires_approval = True
         approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent approval threshold of ${agent.requires_human_approval_over:.2f}"
-    
+
+    if total_cost > agent.transaction_limit:
+        requires_approval = True
+        approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent per-transaction limit of ${agent.transaction_limit:.2f}"
+
+    already_spent = spent_today(db, agent)
+    if already_spent + total_cost > agent.daily_budget_limit:
+        requires_approval = True
+        approval_reason = (
+            f"Transaction total ${total_cost:.2f} plus ${already_spent:.2f} already spent today "
+            f"exceeds the agent's daily budget of ${agent.daily_budget_limit:.2f}"
+        )
+
     if total_cost > settings.MAX_TRANSACTION_AMOUNT:
         requires_approval = True
         approval_reason = f"Transaction total ${total_cost:.2f} exceeds platform maximum of ${settings.MAX_TRANSACTION_AMOUNT:.2f}"
@@ -450,7 +473,7 @@ async def agent_status(
     
     return {
         "agent_name": agent.name,
-        "daily_budget_remaining": agent.daily_budget_limit,  # Simplified
+        "daily_budget_remaining": max(0.0, agent.daily_budget_limit - spent_today(db, agent)),
         "transaction_limit": agent.transaction_limit,
         "approval_threshold": agent.requires_human_approval_over,
         "recent_transactions": len(recent_transactions),

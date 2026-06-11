@@ -117,3 +117,29 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
         "payment_intent_id": intent.id,
         "charge_id": getattr(intent, "latest_charge", None),
     }
+
+
+def refund_transaction(transaction: Transaction) -> dict:
+    """
+    Refund a committed transaction in full.
+    Returns {"payment_mode", "refund_id"}.
+    """
+    mode = _payment_mode()
+
+    # Nothing was charged if Stripe is off now, or was off when this
+    # transaction was committed - so there is nothing to refund at Stripe.
+    if mode == "simulated" or not transaction.stripe_payment_intent_id:
+        return {"payment_mode": "simulated", "refund_id": None}
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    try:
+        refund = stripe.Refund.create(
+            payment_intent=transaction.stripe_payment_intent_id,
+            metadata={"transaction_id": str(transaction.id)},
+        )
+    except stripe.StripeError as e:
+        logger.error(f"Stripe error refunding transaction {transaction.id}: {e}")
+        raise PaymentError("Refund failed; the charge was not reversed") from e
+
+    return {"payment_mode": mode, "refund_id": refund.id}

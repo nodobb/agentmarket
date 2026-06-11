@@ -134,7 +134,5 @@ main.py             # FastAPI app entry point
 
 - **Vendor payouts** — purchases are charged to the platform's Stripe
   account; splitting revenue out to vendors needs Stripe Connect onboarding
-- Refunds are not wired up (`stripe_charge_id` is stored, so they can be)
 - Tax (flat 8%) and shipping (flat $5 on merch) are placeholders
 - Search is keyword matching, not semantic/vector search
-- Daily budget limits are stored per agent but not yet enforced across a day
