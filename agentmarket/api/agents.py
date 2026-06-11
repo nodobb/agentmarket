@@ -4,7 +4,7 @@ The core agent interaction endpoints
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
@@ -12,9 +12,10 @@ import secrets
 import uuid
 
 from agentmarket.models import get_db_dependency
-from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor
-from agentmarket.services.auth import get_current_agent
+from agentmarket.models.database import Product, Agent, Transaction, TransactionStatus, Vendor, User
+from agentmarket.services.auth import get_current_agent, get_current_user
 from agentmarket.utils.config import settings
+from agentmarket.utils.rate_limit import limiter, AGENT_RATE_LIMIT
 
 
 router = APIRouter()
@@ -63,16 +64,47 @@ class CommitRequest(BaseModel):
     handshake_token: str = Field(..., description="Token from successful dry-run")
 
 
+class AgentCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Human-readable name for the agent")
+    user_agent_string: Optional[str] = Field(None, description="User-Agent the agent will send with requests")
+    daily_budget_limit: float = Field(100.00, gt=0, description="Maximum total spend per day")
+    transaction_limit: float = Field(50.00, gt=0, description="Maximum amount per transaction")
+    requires_human_approval_over: float = Field(10.00, ge=0, description="Transactions above this amount require owner approval")
+
+
+class AgentRegisterResponse(BaseModel):
+    id: int
+    name: str
+    api_key: str = Field(..., description="Store this securely - it is only shown once")
+    daily_budget_limit: float
+    transaction_limit: float
+    requires_human_approval_over: float
+
+
+class AgentSummary(BaseModel):
+    id: int
+    name: str
+    api_key_preview: str
+    daily_budget_limit: float
+    transaction_limit: float
+    requires_human_approval_over: float
+    is_active: bool
+    last_activity: Optional[datetime]
+
+
 class CommitResponse(BaseModel):
     transaction_id: str
     receipt_id: str
     status: str
     total_amount: float
     completion_message: str
+    payment_mode: str = Field(..., description="'simulated' until real payment processing is enabled - no money moves")
 
 
 @router.get("/products", response_model=List[ProductSearchResponse])
+@limiter.limit(AGENT_RATE_LIMIT)
 async def search_products(
+    request: Request,
     query: Optional[str] = Query(None, description="Semantic search query (e.g., 'cheap API tokens')"),
     category: Optional[str] = Query(None, description="Filter by category"),
     max_price: Optional[float] = Query(None, description="Maximum price filter"),
@@ -137,8 +169,10 @@ async def search_products(
 
 
 @router.post("/dry-run", response_model=DryRunResponse)
+@limiter.limit(AGENT_RATE_LIMIT)
 async def dry_run_transaction(
-    request: DryRunRequest,
+    request: Request,
+    dry_run_request: DryRunRequest,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):
@@ -152,7 +186,7 @@ async def dry_run_transaction(
     
     # Find product
     product = db.query(Product).filter(
-        Product.external_id == request.product_id,
+        Product.external_id == dry_run_request.product_id,
         Product.is_active == True
     ).first()
     
@@ -160,11 +194,11 @@ async def dry_run_transaction(
         raise HTTPException(status_code=404, detail="Product not found")
     
     # Check inventory
-    if not product.is_unlimited_stock and product.stock_count < request.quantity:
+    if not product.is_unlimited_stock and product.stock_count < dry_run_request.quantity:
         raise HTTPException(status_code=400, detail="Insufficient inventory")
     
     # Calculate pricing
-    subtotal = product.price * request.quantity
+    subtotal = product.price * dry_run_request.quantity
     tax = subtotal * 0.08  # 8% tax (simplified)
     shipping = 5.00 if product.category == "merch" else 0.00  # Simplified shipping
     commission = subtotal * settings.COMMISSION_RATE
@@ -174,9 +208,9 @@ async def dry_run_transaction(
     requires_approval = False
     approval_reason = None
     
-    if request.agent_budget_limit and total_cost > request.agent_budget_limit:
+    if dry_run_request.agent_budget_limit and total_cost > dry_run_request.agent_budget_limit:
         requires_approval = True
-        approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent budget limit of ${request.agent_budget_limit:.2f}"
+        approval_reason = f"Transaction total ${total_cost:.2f} exceeds agent budget limit of ${dry_run_request.agent_budget_limit:.2f}"
     
     if total_cost > agent.requires_human_approval_over:
         requires_approval = True
@@ -196,7 +230,7 @@ async def dry_run_transaction(
         product_id=product.id,
         vendor_id=product.vendor_id,
         handshake_token=handshake_token,
-        quantity=request.quantity,
+        quantity=dry_run_request.quantity,
         price_per_unit=product.price,
         subtotal=subtotal,
         tax_amount=tax,
@@ -215,8 +249,8 @@ async def dry_run_transaction(
     
     return DryRunResponse(
         handshake_token=handshake_token,
-        product_id=request.product_id,
-        quantity=request.quantity,
+        product_id=dry_run_request.product_id,
+        quantity=dry_run_request.quantity,
         price_per_unit=product.price,
         subtotal=subtotal,
         tax=tax,
@@ -230,8 +264,10 @@ async def dry_run_transaction(
 
 
 @router.post("/commit", response_model=CommitResponse)
+@limiter.limit(AGENT_RATE_LIMIT)
 async def commit_transaction(
-    request: CommitRequest,
+    request: Request,
+    commit_request: CommitRequest,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):
@@ -245,7 +281,7 @@ async def commit_transaction(
     
     # Find the dry-run transaction
     transaction = db.query(Transaction).filter(
-        Transaction.handshake_token == request.handshake_token,
+        Transaction.handshake_token == commit_request.handshake_token,
         Transaction.agent_id == agent.id,
         Transaction.status == TransactionStatus.DRY_RUN
     ).first()
@@ -264,7 +300,9 @@ async def commit_transaction(
             detail=f"Human approval required: {transaction.approval_reason}"
         )
     
-    # Process payment (simplified - in production, integrate with Stripe)
+    # Payment processing is not implemented yet: the transaction is recorded
+    # and inventory updated, but no money moves. The response says so
+    # explicitly via payment_mode="simulated".
     receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
     
     # Update transaction
@@ -283,12 +321,75 @@ async def commit_transaction(
         receipt_id=receipt_id,
         status="completed",
         total_amount=transaction.total_amount,
-        completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}"
+        completion_message=f"Successfully purchased {transaction.quantity}x {transaction.product.name}",
+        payment_mode="simulated"
     )
 
 
+@router.post("/register", response_model=AgentRegisterResponse)
+async def register_agent(
+    agent_data: AgentCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """
+    Register a new agent and receive its API key.
+    The API key is only returned once - store it securely.
+    """
+
+    agent = Agent(
+        owner_id=current_user.id,
+        name=agent_data.name,
+        api_key=f"ak_{secrets.token_urlsafe(32)}",
+        user_agent_string=agent_data.user_agent_string,
+        daily_budget_limit=agent_data.daily_budget_limit,
+        transaction_limit=agent_data.transaction_limit,
+        requires_human_approval_over=agent_data.requires_human_approval_over,
+        is_active=True
+    )
+
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+
+    return AgentRegisterResponse(
+        id=agent.id,
+        name=agent.name,
+        api_key=agent.api_key,
+        daily_budget_limit=agent.daily_budget_limit,
+        transaction_limit=agent.transaction_limit,
+        requires_human_approval_over=agent.requires_human_approval_over
+    )
+
+
+@router.get("/mine", response_model=List[AgentSummary])
+async def list_my_agents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """List agents owned by the current user (API keys are masked)"""
+
+    agents = db.query(Agent).filter(Agent.owner_id == current_user.id).all()
+
+    return [
+        AgentSummary(
+            id=agent.id,
+            name=agent.name,
+            api_key_preview=f"{agent.api_key[:7]}...{agent.api_key[-4:]}",
+            daily_budget_limit=agent.daily_budget_limit,
+            transaction_limit=agent.transaction_limit,
+            requires_human_approval_over=agent.requires_human_approval_over,
+            is_active=agent.is_active,
+            last_activity=agent.last_activity
+        )
+        for agent in agents
+    ]
+
+
 @router.get("/status")
+@limiter.limit(AGENT_RATE_LIMIT)
 async def agent_status(
+    request: Request,
     x_agent_api_key: str = Header(..., alias="X-Agent-API-Key"),
     db: Session = Depends(get_db_dependency)
 ):

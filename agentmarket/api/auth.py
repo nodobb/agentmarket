@@ -3,16 +3,17 @@ Authentication API Routes
 """
 
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from agentmarket.models import get_db_dependency
 from agentmarket.models.database import User
 from agentmarket.services.auth import (
     verify_password, get_password_hash, create_access_token,
     get_current_user
 )
+from agentmarket.utils.rate_limit import limiter, LOGIN_RATE_LIMIT
 
 
 router = APIRouter()
@@ -24,6 +25,14 @@ class UserCreate(BaseModel):
     password: str
     full_name: str
     role: str = "agent_owner"
+
+    @field_validator("role")
+    @classmethod
+    def role_must_be_self_assignable(cls, v: str) -> str:
+        # "admin" must never be self-assignable through public registration
+        if v not in ("agent_owner", "vendor"):
+            raise ValueError("role must be 'agent_owner' or 'vendor'")
+        return v
 
 
 class UserResponse(BaseModel):
@@ -71,7 +80,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db_dependenc
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db_dependency)):
+@limiter.limit(LOGIN_RATE_LIMIT)
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db_dependency)):
     """Login and get access token"""
     
     # Authenticate user

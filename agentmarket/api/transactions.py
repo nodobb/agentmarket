@@ -4,11 +4,12 @@ Transaction Management API Routes
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from agentmarket.models import get_db_dependency
-from agentmarket.models.database import Transaction, TransactionStatus, User, Agent, Vendor, Product
+from agentmarket.models.database import Transaction, TransactionStatus, User, UserRole, Agent, Vendor, Product
 from agentmarket.services.auth import get_current_user, get_admin_user
 
 
@@ -56,22 +57,20 @@ async def list_transactions(
         .join(Vendor, Transaction.vendor_id == Vendor.id)
     )
     
-    # Filter based on user role
-    if current_user.role == "vendor":
-        # Vendors only see their own transactions
+    # Non-admins see transactions for their vendor profile and/or their agents.
+    # Ownership is checked directly (not via role) because a user can be both
+    # a vendor and an agent owner.
+    if current_user.role != UserRole.ADMIN:
+        conditions = []
         vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
         if vendor:
-            query = query.filter(Transaction.vendor_id == vendor.id)
-        else:
-            return []  # No vendor profile
-    elif current_user.role == "agent_owner":
-        # Agent owners see transactions from their agents
+            conditions.append(Transaction.vendor_id == vendor.id)
         agent_ids = [agent.id for agent in current_user.agents]
         if agent_ids:
-            query = query.filter(Transaction.agent_id.in_(agent_ids))
-        else:
-            return []  # No agents
-    # Admins see all transactions (no filter)
+            conditions.append(Transaction.agent_id.in_(agent_ids))
+        if not conditions:
+            return []  # No vendor profile and no agents
+        query = query.filter(or_(*conditions))
     
     # Apply filters
     if status:
@@ -116,16 +115,13 @@ async def get_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    # Check permissions
-    if current_user.role == "vendor":
+    # Admins can access any transaction; others must own the vendor or the agent side
+    if current_user.role != UserRole.ADMIN:
         vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
-        if not vendor or transaction.vendor_id != vendor.id:
+        owns_vendor_side = vendor is not None and transaction.vendor_id == vendor.id
+        owns_agent_side = transaction.agent_id in [agent.id for agent in current_user.agents]
+        if not (owns_vendor_side or owns_agent_side):
             raise HTTPException(status_code=403, detail="Access denied")
-    elif current_user.role == "agent_owner":
-        agent_ids = [agent.id for agent in current_user.agents]
-        if transaction.agent_id not in agent_ids:
-            raise HTTPException(status_code=403, detail="Access denied")
-    # Admins can access any transaction
     
     return TransactionResponse(
         id=transaction.id,
@@ -159,13 +155,12 @@ async def approve_transaction(
     if not transaction.requires_human_approval:
         raise HTTPException(status_code=400, detail="Transaction does not require approval")
     
-    # Check permissions - only agent owner or admin can approve
-    if current_user.role == "agent_owner":
+    # Only the agent's owner or an admin can approve, regardless of the
+    # owner's current role (e.g. a user who also registered as a vendor)
+    if current_user.role != UserRole.ADMIN:
         agent_ids = [agent.id for agent in current_user.agents]
         if transaction.agent_id not in agent_ids:
             raise HTTPException(status_code=403, detail="Access denied")
-    elif current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Access denied")
     
     if approval_request.approved:
         # Approve and process the transaction
