@@ -164,8 +164,22 @@ async def approve_transaction(
             raise HTTPException(status_code=403, detail="Access denied")
     
     if approval_request.approved:
-        # Approval commits the transaction, so the charge happens here.
-        # If the card fails, the transaction stays pending so it can be retried.
+        # Reserve inventory before charging: the conditional atomic update
+        # can neither lose concurrent updates nor drive stock negative.
+        # The reservation only persists at db.commit() below, so a failed
+        # charge rolls it back and the transaction stays retryable.
+        if not transaction.product.is_unlimited_stock:
+            reserved = db.query(Product).filter(
+                Product.id == transaction.product_id,
+                Product.stock_count >= transaction.quantity
+            ).update(
+                {Product.stock_count: Product.stock_count - transaction.quantity},
+                synchronize_session=False
+            )
+            if not reserved:
+                db.rollback()
+                raise HTTPException(status_code=400, detail="Insufficient inventory")
+
         try:
             payment = payments.charge_transaction(transaction.agent, transaction)
         except payments.PaymentError as e:
@@ -178,10 +192,6 @@ async def approve_transaction(
         transaction.committed_at = datetime.utcnow()
         transaction.stripe_payment_intent_id = payment["payment_intent_id"]
         transaction.stripe_charge_id = payment["charge_id"]
-
-        # Update product inventory if needed
-        if not transaction.product.is_unlimited_stock:
-            transaction.product.stock_count -= transaction.quantity
 
         message = "Transaction approved and processed"
     else:
@@ -228,9 +238,13 @@ async def refund_transaction(
     transaction.status = TransactionStatus.REFUNDED
     transaction.approval_reason = f"Refunded by {current_user.full_name}"
 
-    # Return the items to inventory
+    # Return the items to inventory (atomic, and via a query update so no
+    # SQL expression object lingers on the in-memory product instance)
     if not transaction.product.is_unlimited_stock:
-        transaction.product.stock_count += transaction.quantity
+        db.query(Product).filter(Product.id == transaction.product_id).update(
+            {Product.stock_count: Product.stock_count + transaction.quantity},
+            synchronize_session=False
+        )
 
     db.commit()
 

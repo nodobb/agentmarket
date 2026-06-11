@@ -19,7 +19,7 @@ def register_and_login(client, email, password="Testpass123!", full_name="Test U
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_vendor_with_product(client, headers, price=9.99, external_id="credits-1k"):
+def create_vendor_with_product(client, headers, price=9.99, external_id="credits-1k", stock=100):
     resp = client.post("/api/vendors/register", headers=headers, json={
         "business_name": "Test Shop", "description": "Sells test products",
     })
@@ -27,7 +27,7 @@ def create_vendor_with_product(client, headers, price=9.99, external_id="credits
     resp = client.post("/api/vendors/products", headers=headers, json={
         "external_id": external_id, "name": "1000 API Credits",
         "description": "Bulk API credits", "price": price,
-        "category": "api_services", "tags": ["api", "credits"], "stock_count": 100,
+        "category": "api_services", "tags": ["api", "credits"], "stock_count": stock,
     })
     assert resp.status_code == 200, resp.text
     return resp.json()
@@ -132,6 +132,28 @@ def test_full_purchase_flow(client):
     resp = client.post("/api/agents/commit", headers=agent_headers,
                        json={"handshake_token": dry_run["handshake_token"]})
     assert resp.status_code == 404
+
+
+def test_commit_cannot_oversell(client):
+    """Two valid handshakes for the last unit: only one commit may succeed."""
+    vendor_headers = register_and_login(client, "vendor@example.com")
+    create_vendor_with_product(client, vendor_headers, external_id="last-one", stock=1)
+    agent_headers = provision_agent(client, register_and_login(client, "owner@example.com"))
+
+    tokens = [
+        client.post("/api/agents/dry-run", headers=agent_headers,
+                    json={"product_id": "last-one", "quantity": 1}).json()["handshake_token"]
+        for _ in range(2)
+    ]
+    results = [
+        client.post("/api/agents/commit", headers=agent_headers,
+                    json={"handshake_token": token}).status_code
+        for token in tokens
+    ]
+    assert sorted(results) == [200, 400]
+
+    products = client.get("/api/agents/products", headers=agent_headers).json()
+    assert products[0]["stock_available"] == 0
 
 
 def test_dry_run_rejects_insufficient_stock(client):

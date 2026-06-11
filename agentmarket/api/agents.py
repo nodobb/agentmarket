@@ -333,11 +333,28 @@ async def commit_transaction(
             detail=f"Human approval required: {transaction.approval_reason}"
         )
     
+    # Reserve inventory before charging: the conditional atomic update can
+    # neither lose concurrent updates nor drive stock negative (oversell).
+    # The reservation only persists at db.commit(), so a failed charge
+    # rolls it back.
+    if not transaction.product.is_unlimited_stock:
+        reserved = db.query(Product).filter(
+            Product.id == transaction.product_id,
+            Product.stock_count >= transaction.quantity
+        ).update(
+            {Product.stock_count: Product.stock_count - transaction.quantity},
+            synchronize_session=False
+        )
+        if not reserved:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Insufficient inventory")
+
     # Charge the agent's saved payment method (or record a simulated
     # purchase when Stripe is not configured - payment_mode says which)
     try:
         payment = payments.charge_transaction(agent, transaction)
     except payments.PaymentError as e:
+        db.rollback()
         raise HTTPException(status_code=402, detail=str(e))
 
     receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
@@ -348,10 +365,6 @@ async def commit_transaction(
     transaction.completed_at = datetime.utcnow()  # Simplified
     transaction.stripe_payment_intent_id = payment["payment_intent_id"]
     transaction.stripe_charge_id = payment["charge_id"]
-
-    # Update product inventory
-    if not transaction.product.is_unlimited_stock:
-        transaction.product.stock_count -= transaction.quantity
 
     db.commit()
 
