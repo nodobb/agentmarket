@@ -317,8 +317,8 @@ async def commit_transaction(
         Transaction.handshake_token == commit_request.handshake_token,
         Transaction.agent_id == agent.id,
         Transaction.status == TransactionStatus.DRY_RUN
-    ).first()
-    
+    ).with_for_update().first()
+
     if not transaction:
         raise HTTPException(status_code=404, detail="Invalid or expired handshake token")
     
@@ -366,7 +366,18 @@ async def commit_transaction(
     transaction.stripe_payment_intent_id = payment["payment_intent_id"]
     transaction.stripe_charge_id = payment["charge_id"]
 
-    db.commit()
+    # If finalizing fails after the card was charged, reverse the charge so
+    # money and records never disagree
+    transaction_id = transaction.id
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        payments.reverse_charge(payment, transaction_id)
+        raise HTTPException(
+            status_code=500,
+            detail="The purchase could not be finalized; any charge has been reversed."
+        )
 
     return CommitResponse(
         transaction_id=str(transaction.id),

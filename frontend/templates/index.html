@@ -1,172 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentMarket - B2A Marketplace</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .agent-icon {
-            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentMarket — The Marketplace for AI Agents</title>
+<meta name="description" content="AgentMarket is a B2A (Business-to-Agent) marketplace where autonomous AI agents discover and purchase business services safely: budgets, approval thresholds, and a two-phase checkout built in.">
+<style>
+  :root{
+    --bg:#0b0e1a; --bg2:#11152a; --card:#161b33;
+    --text:#e8eaf6; --muted:#9aa3c0;
+    --grad:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    --grad2:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);
+    --border:#252b4a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  a{color:#8ea2ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+  .logo{font-size:1.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  nav .links a{color:var(--muted);margin-left:22px;font-size:.95rem}
+  nav .links a:hover{color:var(--text);text-decoration:none}
+  .hero{padding:84px 0 64px;text-align:center}
+  .hero h1{font-size:clamp(2.2rem,5.5vw,3.6rem);font-weight:800;line-height:1.15}
+  .hero h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{max-width:640px;margin:22px auto 0;color:var(--muted);font-size:1.15rem}
+  .badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:.85rem;color:var(--muted);margin-bottom:24px}
+  .cta{margin-top:36px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:13px 26px;border-radius:10px;font-weight:600;text-decoration:none}
+  .btn:hover{text-decoration:none;filter:brightness(1.1)}
+  .btn-primary{background:var(--grad);color:#fff}
+  .btn-ghost{border:1px solid var(--border);color:var(--text)}
+  section{padding:64px 0}
+  h2{font-size:1.9rem;font-weight:800;text-align:center;margin-bottom:14px}
+  .sub{color:var(--muted);text-align:center;max-width:560px;margin:0 auto 44px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px}
+  .card .step{width:38px;height:38px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;margin-bottom:14px}
+  .card h3{font-size:1.1rem;margin-bottom:8px}
+  .card p{color:var(--muted);font-size:.95rem}
+  .price-box{max-width:520px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:38px;text-align:center}
+  .price-box .big{font-size:3rem;font-weight:800;background:var(--grad2);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .price-box ul{list-style:none;margin-top:20px;color:var(--muted);font-size:.97rem}
+  .price-box li{padding:7px 0;border-bottom:1px solid var(--border)}
+  .price-box li:last-child{border-bottom:none}
+  code{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.88em;color:#9fe8ff}
+  footer{border-top:1px solid var(--border);padding:36px 0;margin-top:40px;color:var(--muted);font-size:.9rem}
+  footer .cols{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  footer a{color:var(--muted)}
+  footer a:hover{color:var(--text)}
+</style>
 </head>
-<body class="bg-gray-50">
-    <!-- Hero Section -->
-    <div class="gradient-bg">
-        <div class="container mx-auto px-6 py-16">
-            <div class="text-center text-white">
-                <h1 class="text-5xl font-bold mb-4">AgentMarket</h1>
-                <p class="text-xl mb-8">The world's first B2A (Business-to-Agent) marketplace</p>
-                <p class="text-lg opacity-90 max-w-3xl mx-auto mb-12">
-                    Built specifically for autonomous AI agents. No CAPTCHAs, no visual complexity, 
-                    just pure API-first commerce with built-in safety protocols.
-                </p>
-                <div class="flex justify-center space-x-4">
-                    <a href="/demo" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition animate-pulse">
-                        🔴 LIVE DEMO - See Agents Shopping Now!
-                    </a>
-                    <a href="/dashboard" class="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition">
-                        Start Selling to Agents
-                    </a>
-                </div>
-            </div>
-        </div>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo">AgentMarket</div>
+    <div class="links">
+      <a href="/demo">Live Demo</a>
+      <a href="/docs-agent">For Agents</a>
+      <a href="/dashboard">For Vendors</a>
+      <a href="/docs">API Docs</a>
     </div>
+  </nav>
 
-    <!-- Key Features -->
-    <div class="container mx-auto px-6 py-16">
-        <h2 class="text-3xl font-bold text-center mb-12">Agent-First Design Principles</h2>
-        
-        <div class="grid md:grid-cols-3 gap-8">
-            <!-- Discovery -->
-            <div class="bg-white p-8 rounded-xl shadow-md">
-                <div class="agent-icon w-16 h-16 rounded-full mb-6 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-semibold mb-4">Agent Discovery</h3>
-                <p class="text-gray-600">
-                    Agents discover capabilities via <code>/.well-known/agent-manifest.json</code> 
-                    instead of navigating complex human interfaces.
-                </p>
-            </div>
-
-            <!-- Safety -->
-            <div class="bg-white p-8 rounded-xl shadow-md">
-                <div class="agent-icon w-16 h-16 rounded-full mb-6 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-semibold mb-4">Safety Protocols</h3>
-                <p class="text-gray-600">
-                    Two-phase transactions with dry-run validation and automatic human escalation 
-                    when budgets or safety limits are exceeded.
-                </p>
-            </div>
-
-            <!-- Commerce -->
-            <div class="bg-white p-8 rounded-xl shadow-md">
-                <div class="agent-icon w-16 h-16 rounded-full mb-6 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path>
-                        <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-semibold mb-4">Semantic Commerce</h3>
-                <p class="text-gray-600">
-                    Natural language product search ("cheap API tokens") instead of rigid 
-                    category filtering and pagination.
-                </p>
-            </div>
-        </div>
+  <div class="hero">
+    <div class="badge">B2A · Business-to-Agent commerce · Now in beta</div>
+    <h1>The marketplace built for<br><span>autonomous AI agents</span></h1>
+    <p>Humans browse storefronts. Agents call APIs. AgentMarket lets AI agents discover and purchase business services programmatically — with budgets, human approval thresholds, and a two-phase checkout that makes every purchase safe and auditable.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="/docs">Explore the API</a>
+      <a class="btn btn-ghost" href="/demo">Watch a live purchase</a>
     </div>
+  </div>
+</div>
 
-    <!-- Agent Integration Example -->
-    <div class="bg-gray-100 py-16">
-        <div class="container mx-auto px-6">
-            <h2 class="text-3xl font-bold text-center mb-12">How Agents Integrate</h2>
-            
-            <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4">1. Discovery</h3>
-                        <pre class="bg-gray-100 p-4 rounded text-sm overflow-x-auto"><code>GET /.well-known/agent-manifest.json
-
-{
-  "service_name": "AgentMarket",
-  "endpoints": {
-    "product_search": "/api/agents/products",
-    "dry_run": "/api/transactions/dry-run",
-    "commit": "/api/transactions/commit"
-  },
-  "safety_protocol": "ALWAYS dry-run first"
-}</code></pre>
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4">2. Search & Purchase</h3>
-                        <pre class="bg-gray-100 p-4 rounded text-sm overflow-x-auto"><code>GET /api/agents/products?query=cheap+API+tokens
-Header: X-Agent-API-Key: your_key
-
-POST /api/agents/dry-run
-{
-  "product_id": "api-tokens-deepseek",
-  "quantity": 1,
-  "agent_budget_limit": 10.00
-}</code></pre>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div style="background:var(--bg2)">
+  <section class="wrap">
+    <h2>How it works</h2>
+    <p class="sub">Three steps from discovery to a completed, safety-checked purchase.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="step">1</div>
+        <h3>Agents discover</h3>
+        <p>Agents fetch the machine-readable manifest at <code>/.well-known/agent-manifest.json</code> and search the catalog with natural-language queries — no CAPTCHAs, no screen-scraping.</p>
+      </div>
+      <div class="card">
+        <div class="step">2</div>
+        <h3>Dry-run first, always</h3>
+        <p>Every purchase starts with a dry-run that returns exact pricing, taxes, and fees plus a short-lived handshake token. No surprises, no accidental spending.</p>
+      </div>
+      <div class="card">
+        <div class="step">3</div>
+        <h3>Commit within limits</h3>
+        <p>The agent commits the handshake to complete the purchase. Anything over its per-transaction cap, daily budget, or approval threshold is held for its human owner to approve.</p>
+      </div>
     </div>
+  </section>
+</div>
 
-    <!-- Statistics -->
-    <div class="container mx-auto px-6 py-16">
-        <div class="text-center">
-            <h2 class="text-3xl font-bold mb-8">Join the Agent Economy</h2>
-            <div class="grid md:grid-cols-4 gap-8">
-                <div class="text-center">
-                    <div class="text-4xl font-bold text-blue-600 mb-2">2.5%</div>
-                    <div class="text-gray-600">Commission Rate</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-4xl font-bold text-blue-600 mb-2">5min</div>
-                    <div class="text-gray-600">Transaction Timeout</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-4xl font-bold text-blue-600 mb-2">24/7</div>
-                    <div class="text-gray-600">Agent Availability</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-4xl font-bold text-blue-600 mb-2">100%</div>
-                    <div class="text-gray-600">API-First Design</div>
-                </div>
-            </div>
-        </div>
+<section class="wrap">
+  <h2>Built-in safety, not bolted on</h2>
+  <p class="sub">Every agent operates inside guardrails its owner controls.</p>
+  <div class="grid">
+    <div class="card"><h3>💳 Spending limits</h3><p>Per-transaction caps and daily budgets are enforced on every purchase — agents simply cannot overspend.</p></div>
+    <div class="card"><h3>🙋 Human approval</h3><p>Purchases above the owner's threshold pause until a human says yes. Owners can approve, deny, or refund from one API.</p></div>
+    <div class="card"><h3>🧾 Full audit trail</h3><p>Every dry-run, commit, approval, and refund is recorded. Payments are processed securely by Stripe.</p></div>
+  </div>
+</section>
+
+<div style="background:var(--bg2)">
+  <section class="wrap" id="pricing">
+    <h2>Simple, transparent pricing</h2>
+    <p class="sub">No listing fees. No monthly minimums. We only earn when vendors sell.</p>
+    <div class="price-box">
+      <div class="big">2.5%</div>
+      <div style="color:var(--muted)">commission per successful transaction</div>
+      <ul>
+        <li>Free vendor registration and product listings</li>
+        <li>Free agent registration for buyers</li>
+        <li>Secure card processing via Stripe</li>
+        <li>Full refunds available — see our <a href="/legal#refunds">refund policy</a></li>
+      </ul>
     </div>
+  </section>
+</div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12">
-        <div class="container mx-auto px-6 text-center">
-            <h3 class="text-2xl font-bold mb-4">Ready to Join the Future?</h3>
-            <p class="text-gray-300 mb-6">
-                Start accepting autonomous agent customers today
-            </p>
-            <div class="flex justify-center space-x-4">
-                <a href="/api/auth/register" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition">
-                    Register as Vendor
-                </a>
-                <a href="/docs-agent" class="border border-gray-600 hover:border-gray-400 px-6 py-3 rounded-lg font-semibold transition">
-                    Agent Integration Guide
-                </a>
-            </div>
-        </div>
-    </footer>
+<section class="wrap" style="text-align:center">
+  <h2>Sell to the agent economy</h2>
+  <p class="sub">List your API credits, SaaS services, or digital products where AI agents shop. Setup takes minutes.</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="/dashboard">Become a vendor</a>
+    <a class="btn btn-ghost" href="/docs-agent">Connect your agent</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <div class="logo" style="margin-bottom:6px">AgentMarket</div>
+      <div>The Business-to-Agent marketplace.</div>
+      <div>Contact: <a href="mailto:{{ support_email }}">{{ support_email }}</a></div>
+    </div>
+    <div>
+      <div><a href="/legal#terms">Terms of Service</a></div>
+      <div><a href="/legal#privacy">Privacy Policy</a></div>
+      <div><a href="/legal#refunds">Refund &amp; Dispute Policy</a></div>
+      <div><a href="/health">Service status</a></div>
+    </div>
+  </div>
+</footer>
 </body>
 </html>

@@ -119,6 +119,34 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
     }
 
 
+def reverse_charge(payment: dict, transaction_id) -> None:
+    """
+    Best-effort compensating refund for a charge whose transaction could not
+    be finalized (e.g. the database commit failed after the card was charged).
+    Never raises: a refund failure here needs a human, so it is logged as
+    critical instead.
+    """
+    if payment.get("payment_mode") == "simulated" or not payment.get("payment_intent_id"):
+        return
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        stripe.Refund.create(
+            payment_intent=payment["payment_intent_id"],
+            metadata={"transaction_id": str(transaction_id), "reason": "finalization_failed"},
+        )
+        logger.error(
+            f"Reversed charge {payment['payment_intent_id']} for transaction "
+            f"{transaction_id} after a finalization failure"
+        )
+    except stripe.StripeError as e:
+        logger.critical(
+            f"MANUAL INTERVENTION REQUIRED: charge {payment['payment_intent_id']} for "
+            f"transaction {transaction_id} succeeded but finalization failed AND the "
+            f"automatic refund failed: {e}"
+        )
+
+
 def refund_transaction(transaction: Transaction) -> dict:
     """
     Refund a committed transaction in full.

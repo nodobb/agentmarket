@@ -147,12 +147,17 @@ async def approve_transaction(
     db: Session = Depends(get_db_dependency)
 ):
     """Approve or deny a transaction requiring human approval"""
-    
-    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
-    
+
+    # Row lock so concurrent approvals of the same transaction serialize;
+    # the loser then fails the requires_human_approval check instead of
+    # charging the card a second time
+    transaction = db.query(Transaction).filter(
+        Transaction.id == transaction_id
+    ).with_for_update().first()
+
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
+
     if not transaction.requires_human_approval:
         raise HTTPException(status_code=400, detail="Transaction does not require approval")
     
@@ -196,14 +201,27 @@ async def approve_transaction(
         message = "Transaction approved and processed"
     else:
         # Deny the transaction
+        payment = None
         transaction.status = TransactionStatus.FAILED
         transaction.approval_reason = f"Denied by {current_user.full_name}: {approval_request.reason or 'No reason provided'}"
-        
-        message = "Transaction denied"
-    
-    db.commit()
 
-    return {"message": message, "status": transaction.status.value}
+        message = "Transaction denied"
+
+    # If finalizing fails after the card was charged, reverse the charge so
+    # money and records never disagree
+    status_value = transaction.status.value
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        if payment:
+            payments.reverse_charge(payment, transaction_id)
+        raise HTTPException(
+            status_code=500,
+            detail="The approval could not be finalized; any charge has been reversed."
+        )
+
+    return {"message": message, "status": status_value}
 
 
 @router.post("/{transaction_id}/refund")
@@ -214,7 +232,11 @@ async def refund_transaction(
 ):
     """Refund a committed transaction in full (agent owner or admin only)"""
 
-    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    # Row lock so concurrent refund requests serialize; the loser then
+    # fails the status check instead of refunding at Stripe twice
+    transaction = db.query(Transaction).filter(
+        Transaction.id == transaction_id
+    ).with_for_update().first()
 
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
