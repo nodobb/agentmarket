@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sell to AI Agents — AgentMarket for Vendors</title>
+<meta name="description" content="List your digital service once and let AI agents buy it automatically, around the clock. Free to list; 2.5% only when you sell.">
+<style>
+  :root{--bg:#0a0c10;--panel:#0f1319;--line:#1d2430;--text:#d7dde7;--dim:#717d92;
+    --green:#4ade80;--amber:#fbbf24;--cyan:#67e8f9}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
+    background:var(--bg);color:var(--text);line-height:1.7;font-size:15px}
+  a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:820px;margin:0 auto;padding:0 20px 60px}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line)}
+  .logo{color:var(--text);font-weight:700} .logo .prompt{color:var(--green)}
+  nav a{color:var(--dim)} nav a:hover{color:var(--text)}
+  h1{font-size:clamp(1.4rem,4vw,2rem);font-weight:700;line-height:1.4;margin:48px 0 14px}
+  h1 em{font-style:normal;color:var(--green)}
+  .lead{color:var(--dim);font-size:1.05em}
+  h2{font-size:1.05rem;font-weight:700;margin:48px 0 16px;color:var(--green)}
+  h2::before{content:"## ";color:var(--dim)}
+  p{color:var(--dim);margin-bottom:14px}
+  p b, li b{color:var(--text);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin:14px 0}
+  .card .what{color:var(--text);font-weight:600}
+  .card .who{color:var(--dim);font-size:.95em;margin-top:4px}
+  ol{margin:8px 0 8px 24px;color:var(--dim)}
+  ol li{padding:5px 0}
+  ul.flat{list-style:none}
+  ul.flat li{padding:6px 0;color:var(--dim)}
+  ul.flat li::before{content:"+ ";color:var(--green)}
+  .cta{margin:36px 0;display:flex;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:11px 20px;border:1px solid var(--green);color:var(--green);border-radius:6px}
+  .btn:hover{background:var(--green);color:var(--bg);text-decoration:none}
+  .note{border-left:3px solid var(--amber);padding:10px 16px;background:var(--panel);color:var(--dim);font-size:.95em;margin:24px 0}
+  footer{border-top:1px solid var(--line);margin-top:48px;padding-top:24px;color:var(--dim);font-size:.9em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="logo" href="/" style="text-decoration:none"><span class="prompt">$</span> agentmarket</a>
+    <a href="/">&larr; back to home</a>
+  </nav>
+
+  <h1>You're great at your craft.<br>You'd rather not spend your life advertising it.<br><em>Let the robots come to you.</em></h1>
+  <p class="lead">AgentMarket is a store shelf for the newest kind of customer: AI assistants that buy things for the businesses they work for.</p>
+
+  <h2>the 60-second explanation</h2>
+  <p>Businesses everywhere are starting to use AI assistants — software helpers given a job and a budget. One of their jobs is keeping supplies topped up: <b>"when we run low on transcription minutes, buy more."</b></p>
+  <p>Here's the catch: those assistants can't shop on a normal website. They can't browse, click pictures, or fill in checkout forms. They need a store built for software.</p>
+  <p>That's AgentMarket. <b>You list what you sell once — about 15 minutes of setup — and from then on, AI assistants can find it and buy it automatically.</b> No ad campaigns. No checkout pages to build. Money arrives through Stripe. And because "noticing we're running low and reordering" is literally these assistants' job, they're the most reliable repeat customer you'll ever have.</p>
+
+  <h2>what sells here (real examples)</h2>
+  <p>Anything digital, delivered by computer, and sold in countable units:</p>
+  <div class="card"><div class="what">AI &amp; API credits</div><div class="who">You run an image-generation, text, or analysis service → sell credit packs like "10,000 generations — $25"</div></div>
+  <div class="card"><div class="what">Transcription &amp; voice minutes</div><div class="who">You convert audio to text or text to speech → sell "600 minutes — $15"</div></div>
+  <div class="card"><div class="what">Data lookups</div><div class="who">You verify addresses, enrich leads, check companies → sell "1,000 lookups — $10"</div></div>
+  <div class="card"><div class="what">Web data &amp; monitoring</div><div class="who">You scrape, track prices, watch competitors → sell "5,000 page fetches — $20"</div></div>
+  <div class="card"><div class="what">Sending credits</div><div class="who">You deliver email or SMS → sell "10,000 sends — $8"</div></div>
+  <div class="card"><div class="what">Computing time</div><div class="who">You rent out servers or GPUs → sell "100 GPU-hours — $50"</div></div>
+  <p>If your service has an on/off switch and a counter, it probably fits. Physical goods, not yet.</p>
+
+  <h2>how it works for you</h2>
+  <ol>
+    <li><b>Create a free account</b> and a vendor profile (your business name and what you do).</li>
+    <li><b>List a product</b>: name, plain-English description, price, how many you have to sell.</li>
+    <li><b>That's it.</b> Agents searching for what you sell can now find you, get an exact price quote, and buy — with every purchase pre-authorized against the spending limits their human owner set.</li>
+  </ol>
+
+  <h2>what it costs</h2>
+  <ul class="flat">
+    <li>Listing: <b>free</b> — no monthly fee, no setup fee</li>
+    <li>When something sells: we keep <b>2.5%</b>, you keep the rest</li>
+    <li>If nothing sells, you owe nothing, ever</li>
+  </ul>
+
+  <div class="note"><b>Honest fine print:</b> AgentMarket is new — you'd be one of our founding vendors, and we treat founding vendors accordingly. During beta, vendor payouts are processed manually while we finish automated payouts, and we'll tell you exactly when your money moves. Questions before you list? Email us — a human answers: <a href="mailto:{{ support_email }}">{{ support_email }}</a></div>
+
+  <div class="cta">
+    <a class="btn" href="/dashboard">create your vendor account</a>
+    <a class="btn" style="border-color:var(--line);color:var(--text)" href="/demo">watch an agent buy something</a>
+  </div>
+
+  <footer>
+    <div><a href="/legal#terms">terms</a> · <a href="/legal#privacy">privacy</a> · <a href="/legal#refunds">refunds &amp; disputes</a> · contact: <a href="mailto:{{ support_email }}">{{ support_email }}</a></div>
+  </footer>
+</div>
+</body>
+</html>

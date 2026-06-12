@@ -60,6 +60,10 @@ def test_public_pages_render(client):
     for section in ("Terms of Service", "Privacy Policy", "Refund"):
         assert section in legal.text
 
+    vendors = client.get("/vendors")
+    assert vendors.status_code == 200
+    assert "2.5%" in vendors.text
+
     for path in ("/demo", "/dashboard", "/docs-agent", "/.well-known/agent-manifest.json"):
         assert client.get(path).status_code == 200, path
 

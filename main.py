@@ -209,6 +209,15 @@ async def legal(request: Request):
     })
 
 
+@app.get("/vendors", response_class=HTMLResponse)
+async def vendors_page(request: Request):
+    """Plain-English explainer for prospective vendors"""
+    return templates.TemplateResponse("vendors.html", {
+        "request": request,
+        "support_email": settings.SUPPORT_EMAIL,
+    })
+
+
 # Health check
 @app.get("/health")
 async def health_check():
