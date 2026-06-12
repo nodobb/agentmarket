@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://127.0.0.1*)",
       "Bash(.venv/bin/pytest *)",
       "mcp__github__pull_request_read",
       "mcp__github__actions_list",
