@@ -176,7 +176,10 @@ async def agent_manifest():
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Landing page for human visitors"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "support_email": settings.SUPPORT_EMAIL,
+    })
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -191,10 +194,19 @@ async def live_demo(request: Request):
     return templates.TemplateResponse("demo.html", {"request": request})
 
 
-@app.get("/docs-agent", response_class=HTMLResponse) 
+@app.get("/docs-agent", response_class=HTMLResponse)
 async def agent_documentation(request: Request):
     """Agent integration documentation"""
     return templates.TemplateResponse("agent-docs.html", {"request": request})
+
+
+@app.get("/legal", response_class=HTMLResponse)
+async def legal(request: Request):
+    """Terms of service, privacy policy, and refund policy"""
+    return templates.TemplateResponse("legal.html", {
+        "request": request,
+        "support_email": settings.SUPPORT_EMAIL,
+    })
 
 
 # Health check

@@ -49,6 +49,21 @@ def test_health(client):
     assert resp.json()["status"] == "healthy"
 
 
+def test_public_pages_render(client):
+    home = client.get("/")
+    assert home.status_code == 200
+    assert "AgentMarket" in home.text
+    assert "2.5%" in home.text  # pricing must be visible
+
+    legal = client.get("/legal")
+    assert legal.status_code == 200
+    for section in ("Terms of Service", "Privacy Policy", "Refund"):
+        assert section in legal.text
+
+    for path in ("/demo", "/dashboard", "/docs-agent", "/.well-known/agent-manifest.json"):
+        assert client.get(path).status_code == 200, path
+
+
 def test_register_login_me(client):
     headers = register_and_login(client, "user@example.com")
     resp = client.get("/api/auth/me", headers=headers)

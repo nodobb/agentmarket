@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms, Privacy &amp; Refunds — AgentMarket</title>
+<style>
+  :root{--bg:#0b0e1a;--card:#161b33;--text:#e8eaf6;--muted:#9aa3c0;
+    --grad:linear-gradient(135deg,#667eea 0%,#764ba2 100%);--border:#252b4a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+  a{color:#8ea2ff;text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px 60px}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+  .logo{font-size:1.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1{font-size:2rem;margin:30px 0 6px}
+  .updated{color:var(--muted);font-size:.9rem;margin-bottom:30px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:30px;margin-bottom:24px}
+  h2{font-size:1.35rem;margin-bottom:14px}
+  h3{font-size:1.02rem;margin:18px 0 6px}
+  p,li{color:var(--muted);font-size:.97rem}
+  ul{margin:8px 0 8px 22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="logo" href="/" style="text-decoration:none">AgentMarket</a>
+    <a href="/">&larr; Back to home</a>
+  </nav>
+
+  <h1>Terms, Privacy &amp; Refunds</h1>
+  <p class="updated">Last updated: June 2026 · Questions? Contact <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+
+  <section id="terms">
+    <h2>Terms of Service</h2>
+    <h3>What AgentMarket is</h3>
+    <p>AgentMarket is an online marketplace that lets autonomous AI agents, acting on behalf of their human or business owners, discover and purchase digital services and products listed by independent vendors. AgentMarket operates the platform and processes payments; vendors are responsible for delivering the products and services they list.</p>
+    <h3>Accounts and agents</h3>
+    <ul>
+      <li>You must provide accurate information when creating an account, and you are responsible for activity under your account and your agents' API keys.</li>
+      <li>You are responsible for purchases made by agents you register, within the spending limits you configure. Configure budgets and approval thresholds appropriate to your needs.</li>
+      <li>We may suspend accounts or agents engaged in fraud, abuse, or attempts to circumvent platform safety controls.</li>
+    </ul>
+    <h3>Purchases and fees</h3>
+    <ul>
+      <li>All purchases follow a two-phase protocol: a dry-run quote followed by an explicit commit. The price shown at dry-run (including taxes and fees) is the price charged.</li>
+      <li>AgentMarket charges vendors a 2.5% commission on successful transactions. Listing is free.</li>
+      <li>Payments are processed by Stripe. AgentMarket does not store card numbers.</li>
+    </ul>
+    <h3>Liability</h3>
+    <p>The platform is provided "as is" during beta. To the maximum extent permitted by law, AgentMarket's liability for any claim is limited to the amount of the transaction giving rise to the claim. Vendors are solely responsible for the quality and delivery of their products and services.</p>
+  </section>
+
+  <section id="privacy">
+    <h2>Privacy Policy</h2>
+    <h3>What we collect</h3>
+    <ul>
+      <li><strong>Account data:</strong> name, email address, and password (stored as a secure hash).</li>
+      <li><strong>Transaction data:</strong> products purchased, amounts, timestamps, and agent activity needed to operate the marketplace and its safety controls.</li>
+      <li><strong>Payment data:</strong> handled by Stripe. We store Stripe references (customer and payment-method identifiers), never card numbers.</li>
+    </ul>
+    <h3>How we use it</h3>
+    <p>We use this data to operate the marketplace: processing purchases, enforcing spending limits, routing human approvals, preventing fraud, and providing support. We do not sell personal data to third parties.</p>
+    <h3>Sharing</h3>
+    <p>Data is shared only with service providers needed to run the platform (payment processing by Stripe, cloud hosting), with vendors to the extent needed to fulfill an order, and where required by law.</p>
+    <h3>Your choices</h3>
+    <p>You may request a copy or deletion of your personal data by emailing <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Deleting account data does not erase transaction records we must retain for financial compliance.</p>
+  </section>
+
+  <section id="refunds">
+    <h2>Refund &amp; Dispute Policy</h2>
+    <h3>Refunds</h3>
+    <ul>
+      <li>If a purchased product or service was not delivered as described, you are entitled to a full refund of the transaction amount, refunded to the original payment method.</li>
+      <li>Agent owners can also initiate refunds for their agents' purchases directly through the platform.</li>
+      <li>Refund requests should be made within 14 days of the transaction. Refunds are processed through Stripe and typically appear within 5–10 business days.</li>
+    </ul>
+    <h3>Disputes</h3>
+    <p>If you disagree with a charge or a vendor about an order, email <a href="mailto:{{ support_email }}">{{ support_email }}</a> with the transaction ID. We respond within 2 business days and will mediate between buyer and vendor; where the product was not delivered as described, we resolve in favor of the buyer.</p>
+    <h3>Cancellations</h3>
+    <p>Dry-run quotes carry no charge and expire automatically. A purchase only happens when an agent explicitly commits (or its owner approves) a transaction.</p>
+  </section>
+</div>
+</body>
+</html>
