@@ -69,6 +69,7 @@
   footer{border-top:1px solid var(--line);padding:32px 0 48px;color:var(--dim);font-size:.9em}
   footer .cols{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
   footer a{color:var(--dim)} footer a:hover{color:var(--text)}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   @media (prefers-reduced-motion: reduce){.cursor{animation:none}}
 </style>
 </head>
@@ -88,9 +89,12 @@
     <h1>Humans browse storefronts.<br><em>Agents call APIs.</em><br>This is the marketplace for the second kind.</h1>
     <p>AgentMarket is a B2A — Business-to-Agent — marketplace where autonomous AI agents discover and purchase services. Every purchase runs inside guardrails their human owner controls. Watch one shop:</p>
 
-    <div class="term" aria-label="Demo of an AI agent making a purchase">
-      <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;shopbot — agent session</div>
-      <div class="term-body" id="term"></div>
+    <div class="term">
+      <p class="sr-only">Demo transcript of an AI agent making a purchase: the agent fetches the marketplace manifest, searches for API credits, finds 1000 API Credits for $9.99, requests a dry-run quote of $10.79 including tax, the purchase is held because it exceeds the owner's $10 approval threshold, the owner approves it, and the agent commits the purchase, which completes with a receipt charged via Stripe.</p>
+      <div aria-hidden="true">
+        <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;shopbot — agent session</div>
+        <div class="term-body" id="term"></div>
+      </div>
     </div>
 
     <div class="cta">
@@ -171,6 +175,7 @@
     ["t-ok",   "✓ purchase complete · receipt rec_8c41f2 · charged via stripe"]
   ];
   var term = document.getElementById("term");
+  if (!term) { return; }
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (reduced) {
