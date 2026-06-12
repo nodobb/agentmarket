@@ -121,6 +121,25 @@ def test_declined_card_does_not_complete_purchase(client, stripe_configured):
     assert products[0]["stock_available"] == 100
 
 
+def test_reverse_charge_refunds_at_stripe(stripe_configured):
+    with patch.object(payments.stripe.Refund, "create",
+                      return_value=SimpleNamespace(id="re_1")) as refund:
+        payments.reverse_charge({"payment_mode": "test", "payment_intent_id": "pi_9"}, 42)
+    assert refund.call_args.kwargs["payment_intent"] == "pi_9"
+
+
+def test_reverse_charge_skips_simulated_payments(stripe_configured):
+    with patch.object(payments.stripe.Refund, "create") as refund:
+        payments.reverse_charge({"payment_mode": "simulated", "payment_intent_id": None}, 42)
+    assert not refund.called
+
+
+def test_reverse_charge_never_raises(stripe_configured):
+    boom = payments.stripe.StripeError("stripe down")
+    with patch.object(payments.stripe.Refund, "create", side_effect=boom):
+        payments.reverse_charge({"payment_mode": "test", "payment_intent_id": "pi_9"}, 42)
+
+
 def test_approval_path_charges_card(client, stripe_configured):
     vendor_headers = register_and_login(client, "vendor@example.com")
     create_vendor_with_product(client, vendor_headers)
