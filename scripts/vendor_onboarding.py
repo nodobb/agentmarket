@@ -1,7 +1,22 @@
 """
 Vendor Onboarding Automation
 Streamlined process to get vendors selling quickly
+
+WARNING - DO NOT SEND THESE TEMPLATES AS-IS.
+
+The follow-up templates below contain FABRICATED statistics and FAKE
+partner names ("127 agents active", "DeepSeek and Replicate just
+joined"). None of it is true; sending it to real businesses would be
+misrepresentation. This file is kept only as historical reference; use
+honest outreach instead (a rewrite was drafted in the June 2026 session).
 """
+
+import sys
+
+sys.exit(
+    "Refusing to run: scripts/vendor_onboarding.py contains fabricated "
+    "claims and must not be sent or executed. See the module docstring."
+)
 
 VENDOR_OUTREACH_TEMPLATE = """
 Subject: Be the first vendor in the $10B agent economy 🤖💰
