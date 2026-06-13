@@ -136,11 +136,9 @@ async def start_connect_onboarding(
         )
 
     try:
-        onboarding_url = payments.create_connect_onboarding(vendor, current_user.email)
+        onboarding_url = payments.create_connect_onboarding(vendor, current_user.email, db)
     except payments.PaymentError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-    db.commit()
 
     return {"onboarding_url": onboarding_url}
 

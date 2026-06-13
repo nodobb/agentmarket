@@ -202,12 +202,11 @@ def refund_transaction(transaction: Transaction) -> dict:
     return {"payment_mode": mode, "refund_id": refund.id}
 
 
-def create_connect_onboarding(vendor, email: str) -> str:
+def create_connect_onboarding(vendor, email: str, db) -> str:
     """
     Create (or reuse) a Stripe Connect Express account for the vendor and
     return a Stripe-hosted onboarding URL where they enter their own
-    business and bank details. Sets vendor.stripe_account_id; the caller
-    commits.
+    business and bank details.
     """
     if not stripe_enabled():
         raise PaymentError(
@@ -225,7 +224,10 @@ def create_connect_onboarding(vendor, email: str) -> str:
                 capabilities={"transfers": {"requested": True}},
                 business_profile={"name": vendor.business_name},
             )
+            # Persist immediately: if the link step below fails, a retry
+            # must reuse this account instead of orphaning it at Stripe
             vendor.stripe_account_id = account.id
+            db.commit()
 
         link = stripe.AccountLink.create(
             account=vendor.stripe_account_id,
