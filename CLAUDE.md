@@ -54,22 +54,33 @@ uvicorn main:app --reload   # serves on :8000
 
 ## Current state (June 2026)
 
-- Live site: https://agentmarket.onrender.com (Render Blueprint "AgentMarket",
-  service `agentmarket` + database `agentmarket-db`)
-- **Stripe deadline June 25, 2026**: Stripe requires a business website on
-  the account or payments shut off. Site is built (landing + /legal pages).
-  Remaining: owner confirms deploy is Live, sets STRIPE_SECRET_KEY and
-  SUPPORT_EMAIL env vars in Render, pastes URL into Stripe → Settings →
-  Business details → Business website
-- Stripe is in TEST mode (sk_test key); owner has standard + restricted keys
+- Live site: **https://agentmarket.tech** (custom domain, DNS A/@ + CNAME/www
+  → Render; https://agentmarket.onrender.com is the same service). Render
+  Blueprint "AgentMarket", service `agentmarket` + database `agentmarket-db`,
+  both pinned to region oregon (cross-region broke DB connectivity once)
+- **Stripe deadline June 25, 2026: DONE (June 12)** — business website
+  (agentmarket.tech), product description, and support contact all filed in
+  Stripe → Business details. Stripe is in TEST mode (sk_test key set in
+  Render); owner has standard + restricted keys
+- Owner email: support@agentmarket.tech ($3/mo hosted inbox). When the inbox
+  is confirmed working, set SUPPORT_EMAIL=support@agentmarket.tech in Render
+  (it renders in the site footer and /legal)
+- Pages: `/` terminal-demo landing, `/vendors` plain-English vendor pitch,
+  `/legal` (terms/privacy/refunds) — Stripe was pointed at these; keep them
+  consistent with actual platform behavior
+- Old Google-Docs terms/privacy from a previous project exist but contradict
+  the platform (no-refunds clause); deliberately NOT used
 - Copilot was supposed to push a Stitch-designed landing page to
   `feature/landing-page-agentmarket` but never did (branch is empty);
   ours shipped instead — compare/swap only if the owner asks
 
 ## Open roadmap (in priority order)
 
-1. Vendor payouts via Stripe Connect (platform currently keeps full amount;
-   commission model is 2.5%)
-2. Real tax/shipping (currently flat 8% / $5 merch placeholder)
-3. Semantic product search (currently keyword matching)
-4. Alembic migrations to replace the add-missing-columns shim
+1. First customers: honest vendor outreach (NOTE: scripts/vendor_onboarding.py
+   contains FABRICATED stats/social proof — never send as-is; an honest
+   rewrite was drafted in the June 12 session chat)
+2. Vendor payouts via Stripe Connect (platform currently keeps full amount;
+   commission model is 2.5%; beta vendors are told payouts are manual)
+3. Real tax/shipping (currently flat 8% / $5 merch placeholder)
+4. Semantic product search (currently keyword matching)
+5. Alembic migrations to replace the add-missing-columns shim
