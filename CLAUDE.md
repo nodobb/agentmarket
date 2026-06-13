@@ -16,8 +16,9 @@ uvicorn main:app --reload   # serves on :8000
 
 ## Architecture map
 
-- `main.py` — app entry; pages (`/`, `/legal`, `/demo`, `/dashboard`,
-  `/docs-agent`), startup guard refuses default secrets when `DEBUG=false`
+- `main.py` — app entry; pages (`/`, `/vendors`, `/legal`, `/demo`,
+  `/dashboard`, `/docs-agent`), startup guard refuses default secrets when
+  `DEBUG=false`
 - `agentmarket/api/` — `auth` (JWT, login form-encoded), `vendors`,
   `agents` (agent registration + X-Agent-API-Key endpoints: search,
   dry-run/commit two-phase purchase, payment-method), `transactions`
