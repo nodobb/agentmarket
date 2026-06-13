@@ -80,8 +80,11 @@ uvicorn main:app --reload   # serves on :8000
 1. First customers: honest vendor outreach (NOTE: scripts/vendor_onboarding.py
    contains FABRICATED stats/social proof — never send as-is; an honest
    rewrite was drafted in the June 12 session chat)
-2. Vendor payouts via Stripe Connect (platform currently keeps full amount;
-   commission model is 2.5%; beta vendors are told payouts are manual)
-3. Real tax/shipping (currently flat 8% / $5 merch placeholder)
-4. Semantic product search (currently keyword matching)
-5. Alembic migrations to replace the add-missing-columns shim
+2. Real tax/shipping (currently flat 8% / $5 merch placeholder)
+3. Semantic product search (currently keyword matching)
+4. Alembic migrations to replace the add-missing-columns shim
+
+Vendor payouts via Stripe Connect: BUILT (June 13) — Express accounts,
+destination charges with 2.5% application fee, refunds reverse transfers.
+Owner still needs to enable Connect on the platform Stripe account
+(dashboard → Connect) before vendor onboarding works.

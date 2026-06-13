@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-super-secret-key-change-this-in-production"
     ALLOWED_HOSTS: str = "*"
     CORS_ORIGINS: str = "*"
+    SITE_URL: str = "https://agentmarket.tech"  # used in Stripe Connect onboarding redirects
     
     # Database
     DATABASE_URL: str = "sqlite:///./agentmarket.db"
