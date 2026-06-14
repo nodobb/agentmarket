@@ -110,8 +110,13 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
     # understand our automated transactions at a glance. (The brand shown on
     # buyers' card statements is set once at the account level in the Stripe
     # dashboard, not per-charge.)
-    product_name = transaction.product.name if transaction.product else f"product {transaction.product_id}"
-    vendor_name = transaction.vendor.business_name if transaction.vendor else "a vendor"
+    # Truncate vendor-controlled names so a very long product/business name
+    # can never push past Stripe's limits (description 1000 chars, metadata
+    # value 500 chars) and make the charge fail.
+    product_name = (transaction.product.name if transaction.product
+                    else f"product {transaction.product_id}")[:200]
+    vendor_name = (transaction.vendor.business_name if transaction.vendor
+                   else "a vendor")[:200]
     description = (
         f"AgentMarket: {transaction.quantity}x {product_name} from {vendor_name} "
         f"(agent purchase, txn {transaction.id})"
