@@ -63,6 +63,9 @@ class Vendor(Base):
     
     # Payment settings
     stripe_account_id = Column(String)
+    # Cached from Stripe so the checkout path doesn't call Stripe on every
+    # purchase; refreshed during onboarding and connect-status checks.
+    stripe_charges_enabled = Column(Boolean, default=False)
     commission_rate = Column(Float, default=0.025)  # 2.5%
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

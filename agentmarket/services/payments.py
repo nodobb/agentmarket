@@ -94,21 +94,16 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
     # routed automatically (destination charge); the platform keeps the
     # commission as the application fee. Unconnected vendors fall back to
     # the beta behavior: full amount to the platform, manual payout.
+    # We read the cached stripe_charges_enabled flag (refreshed during
+    # onboarding/status checks) so the checkout path never blocks on a
+    # synchronous Stripe API call.
     split = {}
     vendor = transaction.vendor
-    if vendor is not None and vendor.stripe_account_id:
-        try:
-            account = stripe.Account.retrieve(vendor.stripe_account_id)
-            if getattr(account, "charges_enabled", False):
-                split = {
-                    "transfer_data": {"destination": vendor.stripe_account_id},
-                    "application_fee_amount": int(round(transaction.commission_amount * 100)),
-                }
-        except stripe.StripeError as e:
-            logger.warning(
-                f"Could not check Connect account for vendor {vendor.id}; "
-                f"charging without split: {e}"
-            )
+    if vendor is not None and vendor.stripe_account_id and vendor.stripe_charges_enabled:
+        split = {
+            "transfer_data": {"destination": vendor.stripe_account_id},
+            "application_fee_amount": int(round(transaction.commission_amount * 100)),
+        }
 
     try:
         intent = stripe.PaymentIntent.create(
@@ -242,8 +237,12 @@ def create_connect_onboarding(vendor, email: str, db) -> str:
     return link.url
 
 
-def connect_status(vendor) -> dict:
-    """Report whether the vendor's Connect account can receive payouts."""
+def connect_status(vendor, db=None) -> dict:
+    """
+    Report whether the vendor's Connect account can receive payouts, and
+    refresh the cached stripe_charges_enabled flag the checkout path relies
+    on. Pass db to persist the refreshed flag.
+    """
     if not vendor.stripe_account_id:
         return {"connected": False, "charges_enabled": False, "payouts_enabled": False}
 
@@ -258,6 +257,12 @@ def connect_status(vendor) -> dict:
     except stripe.StripeError as e:
         logger.error(f"Stripe error checking Connect status for vendor {vendor.id}: {e}")
         raise PaymentError("Could not check Stripe onboarding status") from e
+
+    charges_enabled = bool(getattr(account, "charges_enabled", False))
+    if vendor.stripe_charges_enabled != charges_enabled:
+        vendor.stripe_charges_enabled = charges_enabled
+        if db is not None:
+            db.commit()
 
     return {
         "connected": True,

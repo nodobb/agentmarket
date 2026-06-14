@@ -85,8 +85,10 @@ def test_connect_status(client, stripe_configured):
 # --- split charges ------------------------------------------------------------
 
 
-def connected_marketplace(client):
-    """Vendor with a completed Connect account + an agent with a card."""
+def connected_marketplace(client, charges_enabled=True):
+    """Vendor with a Connect account + an agent with a card. When
+    charges_enabled, a status check populates the cached flag the checkout
+    path reads."""
     vendor_headers = register_and_login(client, "vendor@example.com")
     create_vendor_with_product(client, vendor_headers)
     with patch.object(payments.stripe.Account, "create",
@@ -94,6 +96,11 @@ def connected_marketplace(client):
          patch.object(payments.stripe.AccountLink, "create",
                       return_value=SimpleNamespace(url="https://connect.stripe.com/setup/x")):
         assert client.post("/api/vendors/connect/onboard", headers=vendor_headers).status_code == 200
+
+    # A status check refreshes the cached stripe_charges_enabled flag
+    with patch.object(payments.stripe.Account, "retrieve",
+                      return_value=connected_account(charges_enabled=charges_enabled)):
+        client.get("/api/vendors/connect/status", headers=vendor_headers)
 
     owner_headers = register_and_login(client, "owner@example.com")
     agent_headers = provision_agent(client, owner_headers)
@@ -107,9 +114,8 @@ def test_charge_splits_to_connected_vendor(client, stripe_configured):
     dry_run = client.post("/api/agents/dry-run", headers=agent_headers,
                           json={"product_id": "credits-1k", "quantity": 1}).json()
 
-    with patch.object(payments.stripe.Account, "retrieve",
-                      return_value=connected_account()), \
-         patch.object(payments.stripe.PaymentIntent, "create",
+    # No Stripe Account call needed at checkout - the cached flag drives the split
+    with patch.object(payments.stripe.PaymentIntent, "create",
                       return_value=SimpleNamespace(id="pi_1", latest_charge="ch_1")) as intent:
         resp = client.post("/api/agents/commit", headers=agent_headers,
                            json={"handshake_token": dry_run["handshake_token"]})
@@ -121,14 +127,12 @@ def test_charge_splits_to_connected_vendor(client, stripe_configured):
 
 
 def test_charge_does_not_split_until_onboarding_complete(client, stripe_configured):
-    _, agent_headers = connected_marketplace(client)
+    _, agent_headers = connected_marketplace(client, charges_enabled=False)
 
     dry_run = client.post("/api/agents/dry-run", headers=agent_headers,
                           json={"product_id": "credits-1k", "quantity": 1}).json()
 
-    with patch.object(payments.stripe.Account, "retrieve",
-                      return_value=connected_account(charges_enabled=False)), \
-         patch.object(payments.stripe.PaymentIntent, "create",
+    with patch.object(payments.stripe.PaymentIntent, "create",
                       return_value=SimpleNamespace(id="pi_1", latest_charge="ch_1")) as intent:
         resp = client.post("/api/agents/commit", headers=agent_headers,
                            json={"handshake_token": dry_run["handshake_token"]})
@@ -147,9 +151,7 @@ def test_refund_reverses_vendor_transfer(client, stripe_configured):
 
     dry_run = client.post("/api/agents/dry-run", headers=agent_headers,
                           json={"product_id": "credits-1k", "quantity": 1}).json()
-    with patch.object(payments.stripe.Account, "retrieve",
-                      return_value=connected_account()), \
-         patch.object(payments.stripe.PaymentIntent, "create",
+    with patch.object(payments.stripe.PaymentIntent, "create",
                       return_value=SimpleNamespace(id="pi_1", latest_charge="ch_1")):
         assert client.post("/api/agents/commit", headers=agent_headers,
                            json={"handshake_token": dry_run["handshake_token"]}).status_code == 200

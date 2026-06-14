@@ -158,7 +158,7 @@ async def get_connect_status(
         )
 
     try:
-        return payments.connect_status(vendor)
+        return payments.connect_status(vendor, db)
     except payments.PaymentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

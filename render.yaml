@@ -24,5 +24,7 @@ services:
         sync: false
       - key: COMMISSION_RATE
         value: "0.025"
+      - key: SITE_URL
+        value: "https://agentmarket.tech"
       - key: DEBUG
         value: "false"
