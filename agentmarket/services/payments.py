@@ -105,6 +105,18 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
             "application_fee_amount": int(round(transaction.commission_amount * 100)),
         }
 
+    # A clear, human-readable description reduces "I don't recognize this
+    # charge" disputes (the top chargeback cause) and helps Stripe reviewers
+    # understand our automated transactions at a glance. (The brand shown on
+    # buyers' card statements is set once at the account level in the Stripe
+    # dashboard, not per-charge.)
+    product_name = transaction.product.name if transaction.product else f"product {transaction.product_id}"
+    vendor_name = transaction.vendor.business_name if transaction.vendor else "a vendor"
+    description = (
+        f"AgentMarket: {transaction.quantity}x {product_name} from {vendor_name} "
+        f"(agent purchase, txn {transaction.id})"
+    )
+
     try:
         intent = stripe.PaymentIntent.create(
             amount=int(round(transaction.total_amount * 100)),  # cents
@@ -113,11 +125,13 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
             payment_method=agent.stripe_payment_method_id,
             off_session=True,
             confirm=True,
-            description=f"AgentMarket purchase: {transaction.quantity}x product {transaction.product_id}",
+            description=description,
             metadata={
                 "transaction_id": str(transaction.id),
                 "agent_id": str(agent.id),
                 "vendor_id": str(transaction.vendor_id),
+                "product": product_name,
+                "vendor": vendor_name,
             },
             **split,
         )
