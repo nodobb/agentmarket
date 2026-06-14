@@ -91,6 +91,11 @@ def test_commit_charges_saved_card(client, stripe_configured):
     assert kwargs["customer"] == "cus_123"
     assert kwargs["payment_method"] == "pm_card_visa"
     assert kwargs["confirm"] is True
+    # description and metadata identify the purchase for buyers/reviewers
+    assert "AgentMarket" in kwargs["description"]
+    assert "1000 API Credits" in kwargs["description"]
+    assert kwargs["metadata"]["product"] == "1000 API Credits"
+    assert kwargs["metadata"]["vendor"] == "Test Shop"
 
 
 def test_commit_without_card_is_rejected(client, stripe_configured):
