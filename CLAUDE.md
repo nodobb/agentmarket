@@ -75,16 +75,34 @@ uvicorn main:app --reload   # serves on :8000
   `feature/landing-page-agentmarket` but never did (branch is empty);
   ours shipped instead — compare/swap only if the owner asks
 
+## Owner / Stripe account notes
+
+- Owner is a **sole proprietor**; Stripe legal/identity name is their real
+  personal name (normal, required). Brand shown to customers is "AgentMarket".
+- "Everie" is just an internal Stripe account label (and the name of an
+  unrelated eBay store) — NOT customer-facing, harmless, ignore it.
+- Owner-side Stripe dashboard to-dos (not code; remind if relevant):
+  1. Statement descriptor = `AGENTMARKET` (Settings → Business → Public
+     details) so card statements are recognizable — anti-chargeback
+  2. Public business name = AgentMarket (receipts/Connect onboarding screens)
+  3. Payouts → daily/automatic, so a freeze can never trap much money
+  4. Enable Connect (dashboard → Connect) before vendor onboarding works
+  5. Respond within 24h to any Stripe email (ignored requests cause freezes)
+- Anti-chargeback measures already in code: charges carry a human-readable
+  description (product/qty/vendor, names truncated to 200 chars) + metadata;
+  generous refund policy; spending limits + human-approval gate.
+
 ## Open roadmap (in priority order)
 
 1. First customers: honest vendor outreach (NOTE: scripts/vendor_onboarding.py
-   contains FABRICATED stats/social proof — never send as-is; an honest
-   rewrite was drafted in the June 12 session chat)
+   contains FABRICATED stats/social proof — never send as-is, it now exits
+   immediately if run; an honest rewrite was drafted in the June 12 session)
 2. Real tax/shipping (currently flat 8% / $5 merch placeholder)
 3. Semantic product search (currently keyword matching)
 4. Alembic migrations to replace the add-missing-columns shim
 
 Vendor payouts via Stripe Connect: BUILT (June 13) — Express accounts,
-destination charges with 2.5% application fee, refunds reverse transfers.
+destination charges with 2.5% application fee, refunds reverse transfers,
+vendor.stripe_charges_enabled cached so checkout doesn't call Stripe.
 Owner still needs to enable Connect on the platform Stripe account
 (dashboard → Connect) before vendor onboarding works.
