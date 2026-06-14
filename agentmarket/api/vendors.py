@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 from agentmarket.models import get_db_dependency
 from agentmarket.models.database import User, Vendor, Product
 from agentmarket.services.auth import get_current_user, get_vendor_user
+from agentmarket.services import payments
 
 
 router = APIRouter()
@@ -114,6 +115,52 @@ async def get_vendor_profile(
         )
     
     return vendor
+
+
+@router.post("/connect/onboard")
+async def start_connect_onboarding(
+    current_user: User = Depends(get_vendor_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """
+    Start Stripe Connect onboarding so purchases of this vendor's products
+    pay out to their own bank account automatically. Returns a Stripe-hosted
+    URL where the vendor enters their details (we never see them).
+    """
+
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor profile not found"
+        )
+
+    try:
+        onboarding_url = payments.create_connect_onboarding(vendor, current_user.email, db)
+    except payments.PaymentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"onboarding_url": onboarding_url}
+
+
+@router.get("/connect/status")
+async def get_connect_status(
+    current_user: User = Depends(get_vendor_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """Check whether this vendor's Stripe Connect account is ready for payouts"""
+
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor profile not found"
+        )
+
+    try:
+        return payments.connect_status(vendor, db)
+    except payments.PaymentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/products", response_model=ProductResponse)

@@ -130,9 +130,18 @@ tests/              # Pytest suite covering the API flows
 main.py             # FastAPI app entry point
 ```
 
+## Vendor payouts (Stripe Connect)
+
+Vendors call `POST /api/vendors/connect/onboard` to get a Stripe-hosted
+onboarding link and `GET /api/vendors/connect/status` to check readiness.
+Once a vendor's Connect account has charges enabled, purchases of their
+products split automatically: the vendor receives the total minus the 2.5%
+commission (taken as the application fee), and refunds reverse the vendor's
+share too. Vendors without Connect fall back to platform-held funds and
+manual payouts. Note: Connect must be enabled on the platform's Stripe
+account (Stripe dashboard → Connect) for onboarding to work.
+
 ## What's not done yet
 
-- **Vendor payouts** — purchases are charged to the platform's Stripe
-  account; splitting revenue out to vendors needs Stripe Connect onboarding
 - Tax (flat 8%) and shipping (flat $5 on merch) are placeholders
 - Search is keyword matching, not semantic/vector search

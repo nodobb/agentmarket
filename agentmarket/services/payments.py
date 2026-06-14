@@ -90,6 +90,21 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
+    # Vendors who completed Stripe Connect onboarding get their share
+    # routed automatically (destination charge); the platform keeps the
+    # commission as the application fee. Unconnected vendors fall back to
+    # the beta behavior: full amount to the platform, manual payout.
+    # We read the cached stripe_charges_enabled flag (refreshed during
+    # onboarding/status checks) so the checkout path never blocks on a
+    # synchronous Stripe API call.
+    split = {}
+    vendor = transaction.vendor
+    if vendor is not None and vendor.stripe_account_id and vendor.stripe_charges_enabled:
+        split = {
+            "transfer_data": {"destination": vendor.stripe_account_id},
+            "application_fee_amount": int(round(transaction.commission_amount * 100)),
+        }
+
     try:
         intent = stripe.PaymentIntent.create(
             amount=int(round(transaction.total_amount * 100)),  # cents
@@ -104,6 +119,7 @@ def charge_transaction(agent: Agent, transaction: Transaction) -> dict:
                 "agent_id": str(agent.id),
                 "vendor_id": str(transaction.vendor_id),
             },
+            **split,
         )
     except stripe.CardError as e:
         logger.warning(f"Card declined for transaction {transaction.id}: {e}")
@@ -162,12 +178,94 @@ def refund_transaction(transaction: Transaction) -> dict:
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
     try:
+        # If the charge was split to a vendor's Connect account, the refund
+        # must pull the vendor's share and the commission back too
+        intent = stripe.PaymentIntent.retrieve(transaction.stripe_payment_intent_id)
+        reverse = {}
+        if getattr(intent, "transfer_data", None):
+            reverse = {"reverse_transfer": True, "refund_application_fee": True}
+
         refund = stripe.Refund.create(
             payment_intent=transaction.stripe_payment_intent_id,
             metadata={"transaction_id": str(transaction.id)},
+            **reverse,
         )
     except stripe.StripeError as e:
         logger.error(f"Stripe error refunding transaction {transaction.id}: {e}")
         raise PaymentError("Refund failed; the charge was not reversed") from e
 
     return {"payment_mode": mode, "refund_id": refund.id}
+
+
+def create_connect_onboarding(vendor, email: str, db) -> str:
+    """
+    Create (or reuse) a Stripe Connect Express account for the vendor and
+    return a Stripe-hosted onboarding URL where they enter their own
+    business and bank details.
+    """
+    if not stripe_enabled():
+        raise PaymentError(
+            "Stripe is not configured on this server (STRIPE_SECRET_KEY is not set)"
+        )
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    try:
+        if not vendor.stripe_account_id:
+            account = stripe.Account.create(
+                type="express",
+                email=email,
+                metadata={"vendor_id": str(vendor.id)},
+                capabilities={"transfers": {"requested": True}},
+                business_profile={"name": vendor.business_name},
+            )
+            # Persist immediately: if the link step below fails, a retry
+            # must reuse this account instead of orphaning it at Stripe
+            vendor.stripe_account_id = account.id
+            db.commit()
+
+        link = stripe.AccountLink.create(
+            account=vendor.stripe_account_id,
+            refresh_url=f"{settings.SITE_URL}/dashboard?connect=retry",
+            return_url=f"{settings.SITE_URL}/dashboard?connect=done",
+            type="account_onboarding",
+        )
+    except stripe.StripeError as e:
+        logger.error(f"Stripe error during Connect onboarding for vendor {vendor.id}: {e}")
+        raise PaymentError(e.user_message or "Could not start Stripe onboarding") from e
+
+    return link.url
+
+
+def connect_status(vendor, db=None) -> dict:
+    """
+    Report whether the vendor's Connect account can receive payouts, and
+    refresh the cached stripe_charges_enabled flag the checkout path relies
+    on. Pass db to persist the refreshed flag.
+    """
+    if not vendor.stripe_account_id:
+        return {"connected": False, "charges_enabled": False, "payouts_enabled": False}
+
+    if not stripe_enabled():
+        raise PaymentError(
+            "Stripe is not configured on this server (STRIPE_SECRET_KEY is not set)"
+        )
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        account = stripe.Account.retrieve(vendor.stripe_account_id)
+    except stripe.StripeError as e:
+        logger.error(f"Stripe error checking Connect status for vendor {vendor.id}: {e}")
+        raise PaymentError("Could not check Stripe onboarding status") from e
+
+    charges_enabled = bool(getattr(account, "charges_enabled", False))
+    if vendor.stripe_charges_enabled != charges_enabled:
+        vendor.stripe_charges_enabled = charges_enabled
+        if db is not None:
+            db.commit()
+
+    return {
+        "connected": True,
+        "charges_enabled": bool(getattr(account, "charges_enabled", False)),
+        "payouts_enabled": bool(getattr(account, "payouts_enabled", False)),
+    }

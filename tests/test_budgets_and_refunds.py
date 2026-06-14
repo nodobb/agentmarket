@@ -134,7 +134,9 @@ def test_refund_calls_stripe_when_charged(client, monkeypatch):
     db.commit()
     db.close()
 
-    with patch.object(payments.stripe.Refund, "create",
+    with patch.object(payments.stripe.PaymentIntent, "retrieve",
+                      return_value=SimpleNamespace(id="pi_123", transfer_data=None)), \
+         patch.object(payments.stripe.Refund, "create",
                       return_value=SimpleNamespace(id="re_123")) as refund:
         resp = client.post(f"/api/transactions/{tx_id}/refund", headers=owner_headers)
 

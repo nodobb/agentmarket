@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-super-secret-key-change-this-in-production"
     ALLOWED_HOSTS: str = "*"
     CORS_ORIGINS: str = "*"
+    SITE_URL: str = "http://localhost:8000"  # Connect onboarding redirects; set to prod URL in deploy
     
     # Database
     DATABASE_URL: str = "sqlite:///./agentmarket.db"
